@@ -1,0 +1,72 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: ipma-recrutamento
+
+  # Railway injeta automaticamente PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD
+  # quando se adiciona o plugin "PostgreSQL" ao projeto Railway.
+  datasource:
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:ipma_recrutamento}
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: Europe/Lisbon
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 40MB
+
+app:
+  mail:
+    from: ${MAIL_FROM:recrutamento@ipma.pt}
+    enabled: ${MAIL_ENABLED:false}
+  ipma:
+    portal-base-url: ${PORTAL_BASE_URL:http://localhost:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    pt.ipma.recrutamento: INFO
