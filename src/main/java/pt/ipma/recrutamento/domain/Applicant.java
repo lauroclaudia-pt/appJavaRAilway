@@ -1,5 +1,6 @@
 package pt.ipma.recrutamento.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,6 +23,7 @@ public class Applicant {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id", nullable = false)
+    @JsonIgnore
     private Vaga job;
 
     // --- Secção A: Identificação do candidato ---

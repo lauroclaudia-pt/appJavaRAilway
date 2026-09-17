@@ -55,18 +55,18 @@
       { title: "Ofertas públicas", desc: "Ver o que está publicado no website.", href: "/jobs.html" },
     ],
     CDRH: [
-      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "#", note: "Via API: POST /api/backoffice/vagas" },
-      { title: "Triagem de candidatos", desc: "Verificar requisitos de admissão por vaga.", href: "#vagas" },
-      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "/vaga-form.html" },
+      { title: "Candidatos por vaga", desc: "Selecione uma vaga na lista abaixo para rever candidatos.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Abra uma vaga na lista abaixo para emitir a Ata em PDF.", href: "#vagas" },
     ],
     GESTOR_RH: [
-      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "#", note: "Via API: POST /api/backoffice/vagas" },
-      { title: "Triagem de candidatos", desc: "Verificar requisitos de admissão por vaga.", href: "#vagas" },
-      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "/vaga-form.html" },
+      { title: "Candidatos por vaga", desc: "Selecione uma vaga na lista abaixo para rever candidatos.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Abra uma vaga na lista abaixo para emitir a Ata em PDF.", href: "#vagas" },
     ],
     JURI: [
-      { title: "Candidatos por vaga", desc: "Consultar as candidaturas do procedimento em que participa.", href: "#vagas" },
-      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+      { title: "Candidatos por vaga", desc: "Selecione uma vaga na lista abaixo para rever candidatos.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Abra uma vaga na lista abaixo para emitir a Ata em PDF.", href: "#vagas" },
     ],
     PORTAL: [
       { title: "A sua candidatura", desc: "Acompanhe o estado da sua candidatura pelo número de referência recebido por email.", href: "#" },
@@ -110,14 +110,14 @@
           return;
         }
         document.getElementById("vagas-list").innerHTML = vagas.map(v => `
-          <div class="bulletin-row" id="job-${v.id}">
+          <a class="bulletin-row" id="job-${v.id}" href="/vaga-detail.html?id=${v.id}" style="text-decoration:none; color:inherit;">
             <div>
               <span class="title">${v.name}</span>
               <span class="subtitle">${v.jobPosition || ""} · Código ${v.vagaCode || "—"}</span>
             </div>
             <span class="tag state-${(v.state || "").toLowerCase()}">${v.state}</span>
             <span class="deadline">Etapa: ${v.currentStageCode || "—"}</span>
-          </div>
+          </a>
         `).join("");
       })
       .catch(() => {

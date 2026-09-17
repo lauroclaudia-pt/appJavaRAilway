@@ -49,6 +49,22 @@ function requireAuth() {
   }
 }
 
+/** Descarrega um recurso protegido (ex.: PDF da Ata) através de um pedido autenticado,
+    já que um link <a href> normal não envia as credenciais HTTP Basic. */
+async function downloadAuthenticated(url, filename) {
+  const res = await apiFetch(url);
+  if (!res.ok) throw new Error("Falha ao obter o ficheiro.");
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 function formatDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);

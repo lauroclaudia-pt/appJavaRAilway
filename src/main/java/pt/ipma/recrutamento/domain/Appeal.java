@@ -1,5 +1,6 @@
 package pt.ipma.recrutamento.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,10 +26,12 @@ public class Appeal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_id", nullable = false)
+    @JsonIgnore
     private Applicant applicant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id", nullable = false)
+    @JsonIgnore
     private Vaga job;
 
     @Column(nullable = false, length = 60)

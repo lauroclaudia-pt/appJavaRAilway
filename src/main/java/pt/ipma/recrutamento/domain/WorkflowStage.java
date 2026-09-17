@@ -1,5 +1,6 @@
 package pt.ipma.recrutamento.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,7 @@ public class WorkflowStage {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id", nullable = false)
+    @JsonIgnore
     private WorkflowTemplate template;
 
     @Column(nullable = false)

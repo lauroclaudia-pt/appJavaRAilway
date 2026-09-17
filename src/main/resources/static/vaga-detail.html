@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detalhe da Vaga — Plataforma de Recrutamento do IPMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 28px; padding: 0 40px 32px; border-bottom: 1px solid var(--line); }
+  .info-grid .label { font-size: 0.78rem; color: var(--mist); margin-bottom: 3px; }
+  .info-grid .value { font-size: 0.98rem; color: var(--ink); }
+  .actions-bar { display: flex; flex-wrap: wrap; gap: 12px; padding: 28px 40px; border-bottom: 1px solid var(--line); align-items: center; }
+  .actions-bar .inline-form { display: flex; gap: 8px; align-items: center; }
+  .actions-bar input[type="text"], .actions-bar input[type="number"] {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px; font-size: 0.9rem; width: 160px;
+  }
+  .pipeline { display: flex; flex-wrap: wrap; gap: 10px; padding: 28px 40px; border-bottom: 1px solid var(--line); }
+  .pipeline-step { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 7px 14px; border-radius: 20px; border: 1px solid var(--line); color: var(--mist); }
+  .pipeline-step.st-active { border-color: var(--navy-deep); color: var(--navy-deep); background: var(--foam); font-weight: 500; }
+  .pipeline-step.st-completed { border-color: var(--teal); color: var(--teal-dark); }
+  .pipeline-step.st-skipped, .pipeline-step.st-cancelled { text-decoration: line-through; opacity: 0.5; }
+  .candidate-row { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  .candidate-row:first-child { border-top: 1px solid var(--line); }
+  .candidate-head { display: grid; grid-template-columns: 1fr auto auto auto; gap: 20px; align-items: center; }
+  .triagem-panel { display: none; margin-top: 16px; padding: 18px; background: var(--foam); border-radius: 3px; }
+  .triagem-panel.open { display: block; }
+  .triagem-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+  .triagem-fields label { display:block; font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 4px; }
+  .triagem-fields select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 3px; font-size: 0.9rem; }
+  .msg-inline { font-size: 0.85rem; padding: 8px 0; min-height: 1.4em; }
+  .msg-inline.ok { color: var(--teal-dark); }
+  .msg-inline.err { color: var(--danger); }
+  @media (max-width: 860px) {
+    .info-grid { grid-template-columns: 1fr 1fr; padding-left:20px; padding-right:20px; }
+    .actions-bar { padding-left:20px; padding-right:20px; }
+    .pipeline { padding-left:20px; padding-right:20px; }
+    .candidate-head { grid-template-columns: 1fr; gap: 6px; }
+    .triagem-fields { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
+  <nav class="nav">
+    <a href="/dashboard.html">Painel</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="#" class="btn btn-ghost" id="logout-link">Sair</a>
+  </nav>
+</header>
+
+<div class="dash-header" style="padding-bottom:20px;">
+  <p style="margin:0 0 4px;"><a href="/dashboard.html">&larr; Painel</a></p>
+  <h1 id="vaga-name">A carregar…</h1>
+  <p id="vaga-sub"></p>
+</div>
+
+<div class="info-grid" id="info-grid"></div>
+
+<div class="pipeline" id="pipeline"></div>
+
+<div class="actions-bar" id="actions-bar"></div>
+<div class="msg-inline" id="action-msg" style="padding-left:40px;"></div>
+
+<section class="section" style="border-bottom:none;">
+  <div class="section-head">
+    <h2>Candidatos</h2>
+    <span class="meta" id="candidates-meta"></span>
+  </div>
+  <div id="candidates-list"><div class="empty-state">A carregar…</div></div>
+</section>
+
+<script src="/js/app.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
+
+  const params = new URLSearchParams(window.location.search);
+  const vagaId = params.get("id");
+  if (!vagaId) window.location.href = "/dashboard.html";
+
+  let canManageVaga = false;
+
+  const offerTypeLabels = {
+    PROCEDIMENTO_CONCURSAL_COMUM: "Procedimento Concursal Comum",
+    PROCEDIMENTO_CONCURSAL_RESERVA: "Procedimento Concursal — Reserva",
+    PROCEDIMENTO_CONCURSAL_SELECAO_INTERNACIONAL: "Seleção Internacional",
+    PROCEDIMENTO_CONCURSAL_CARGOS_DIRECAO: "Concurso de Dirigentes",
+    MOBILIDADE_INTERNA: "Mobilidade Interna",
+    MOBILIDADE_INTERCARREIRAS: "Mobilidade Intercarreiras",
+    BOLSA_INVESTIGACAO_CIENTIFICA: "Bolsa de Investigação Científica",
+  };
+  const stateLabels = { DRAFT: "Rascunho", PUBLISHED: "Publicada", RUNNING: "Em curso", FINISHED: "Concluída", CANCELLED: "Cancelada", DESERT: "Deserta" };
+  const stageLabels = {
+    OPENING: "Abertura", APPLICATIONS: "Candidaturas", ADMISSION: "Verif. de Admitidos",
+    MISSING_REQUIREMENTS: "Requisitos em Falta", EVALUATION: "Avaliação", INTERVIEW: "Entrevista",
+    APPEAL: "Audiência de Interessados", CONTRACT: "Contratação", MOBILITY: "Mobilidade", APPOINTMENT: "Nomeação",
+  };
+  const applicantStateLabels = {
+    SUBMITTED: "Submetida", UNDER_REVIEW: "Em análise", ADMITTED: "Admitido", EXCLUDED: "Excluído",
+    UNDER_APPEAL: "Em recurso", APPROVED: "Aprovado", HIRED: "Contratado", REJECTED: "Rejeitado", CANCELLED: "Cancelada",
+  };
+
+  function showMsg(text, ok) {
+    const el = document.getElementById("action-msg");
+    el.textContent = text;
+    el.className = "msg-inline " + (ok ? "ok" : "err");
+    setTimeout(() => { el.textContent = ""; el.className = "msg-inline"; }, 6000);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  function loadVaga() {
+    apiFetch("/api/backoffice/vagas/" + vagaId).then(r => r.json()).then(vaga => {
+      document.getElementById("vaga-name").textContent = vaga.name;
+      document.getElementById("vaga-sub").textContent =
+        (offerTypeLabels[vaga.offerType] || vaga.offerType) + " · " + (vaga.jobPosition || "");
+
+      const depts = (vaga.departments || []).map(d => d.name).join(", ") || "—";
+
+      document.getElementById("info-grid").innerHTML = `
+        <div><div class="label">Estado</div><div class="value"><span class="tag state-${(vaga.state||"").toLowerCase()}">${stateLabels[vaga.state] || vaga.state}</span></div></div>
+        <div><div class="label">Código BEP / Edital</div><div class="value">${vaga.vagaCode || "— por publicar —"}</div></div>
+        <div><div class="label">N.º de vagas</div><div class="value">${vaga.noOfRecruitment ?? "—"}</div></div>
+        <div><div class="label">Prazo de candidatura</div><div class="value">${fmtDate(vaga.deadlineDate)}</div></div>
+        <div><div class="label">Unidade(s) orgânica(s)</div><div class="value">${depts}</div></div>
+        <div><div class="label">Local de trabalho</div><div class="value">${vaga.workLocation ? vaga.workLocation.displayName : "—"}</div></div>
+        <div><div class="label">Vínculo</div><div class="value">${vaga.vinculo || "—"}</div></div>
+        <div><div class="label">Regime</div><div class="value">${vaga.regime || "—"}</div></div>
+      `;
+
+      document.getElementById("pipeline").innerHTML = (vaga.stages || []).map(s => `
+        <span class="pipeline-step st-${(s.state||"").toLowerCase()}">${stageLabels[s.stageCode] || s.stageCode}</span>
+      `).join("");
+
+      renderActions(vaga);
+    }).catch(() => {
+      document.getElementById("vaga-name").textContent = "Não foi possível carregar a vaga.";
+    });
+  }
+
+  function renderActions(vaga) {
+    const bar = document.getElementById("actions-bar");
+    let html = "";
+
+    if (canManageVaga) {
+      if (!vaga.websitePublished) {
+        html += `
+          <form class="inline-form" id="publish-form">
+            <input type="text" id="vagaCode" placeholder="Código BEP / Edital" required>
+            <button type="submit" class="btn btn-primary">Publicar no site</button>
+          </form>`;
+      }
+      html += `<button class="btn btn-ghost" id="btn-concluir-triagem">Concluir Triagem Provisória</button>`;
+      html += `<button class="btn btn-ghost" id="btn-avancar-etapa">Avançar Etapa</button>`;
+      html += `
+        <form class="inline-form" id="notify-form">
+          <input type="number" id="prazoDias" value="10" min="1" style="width:80px;">
+          <button type="submit" class="btn btn-ghost">Notificar e Publicar</button>
+        </form>`;
+    }
+
+    html += `
+      <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--ink-soft);">
+        <input type="checkbox" id="guardarAnexo"> Guardar Ata como anexo
+      </label>
+      <button class="btn btn-primary" id="btn-gerar-ata">Gerar Ata (PDF)</button>
+    `;
+
+    bar.innerHTML = html;
+
+    const publishForm = document.getElementById("publish-form");
+    if (publishForm) {
+      publishForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const code = document.getElementById("vagaCode").value.trim();
+        apiFetch(`/api/backoffice/vagas/${vagaId}/publish?vagaCode=${encodeURIComponent(code)}`, { method: "POST" })
+          .then(async res => {
+            if (res.ok) { showMsg("Vaga publicada com sucesso.", true); loadVaga(); }
+            else { const d = await res.json().catch(()=>({})); showMsg(d.message || "Não foi possível publicar.", false); }
+          });
+      });
+    }
+
+    const btnConcluir = document.getElementById("btn-concluir-triagem");
+    if (btnConcluir) {
+      btnConcluir.addEventListener("click", () => {
+        apiFetch(`/api/backoffice/vagas/${vagaId}/concluir-triagem`, { method: "POST" })
+          .then(async res => {
+            const text = await res.text();
+            showMsg(text, res.ok);
+            if (res.ok) loadVaga();
+          });
+      });
+    }
+
+    const btnAvancar = document.getElementById("btn-avancar-etapa");
+    if (btnAvancar) {
+      btnAvancar.addEventListener("click", () => {
+        apiFetch(`/api/backoffice/vagas/${vagaId}/avancar-etapa`, { method: "POST" })
+          .then(res => { showMsg(res.ok ? "Etapa avançada." : "Não foi possível avançar a etapa.", res.ok); if (res.ok) loadVaga(); });
+      });
+    }
+
+    const notifyForm = document.getElementById("notify-form");
+    if (notifyForm) {
+      notifyForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const dias = document.getElementById("prazoDias").value || 10;
+        apiFetch(`/api/backoffice/vagas/${vagaId}/notificar-publicar?prazoDias=${dias}`, { method: "POST" })
+          .then(res => showMsg(res.ok ? "Notificações enviadas." : "Não foi possível notificar.", res.ok));
+      });
+    }
+
+    document.getElementById("btn-gerar-ata").addEventListener("click", () => {
+      const guardar = document.getElementById("guardarAnexo").checked;
+      downloadAuthenticated(`/api/backoffice/vagas/${vagaId}/ata?guardarComoAnexo=${guardar}`, `ata-vaga-${vagaId}.pdf`)
+        .then(() => showMsg("Ata gerada.", true))
+        .catch(() => showMsg("Não foi possível gerar a ata.", false));
+    });
+  }
+
+  function triSelect(field, candidateId, current) {
+    const opts = [["", "—"], ["true", "Sim"], ["false", "Não"]];
+    const currentStr = current === null || current === undefined ? "" : String(current);
+    return `<select id="${field}-${candidateId}">` + opts.map(([v, l]) =>
+      `<option value="${v}" ${v === currentStr ? "selected" : ""}>${l}</option>`
+    ).join("") + `</select>`;
+  }
+
+  function loadCandidates() {
+    apiFetch(`/api/backoffice/vagas/${vagaId}/candidatos`).then(r => r.json()).then(candidatos => {
+      document.getElementById("candidates-meta").textContent = candidatos.length + " candidato(s)";
+      if (candidatos.length === 0) {
+        document.getElementById("candidates-list").innerHTML = '<div class="empty-state">Ainda não há candidaturas para esta vaga.</div>';
+        return;
+      }
+      document.getElementById("candidates-list").innerHTML = candidatos.map(c => `
+        <div class="candidate-row" id="cand-${c.id}">
+          <div class="candidate-head">
+            <div>
+              <span class="title" style="font-family:var(--serif); font-size:1.02rem;">${c.partnerName}</span>
+              <span class="subtitle" style="display:block; font-size:0.85rem; color:var(--mist);">NIF ${c.idNif} · ${c.emailFrom}</span>
+            </div>
+            <span class="tag">${c.selectionMethods || "—"}</span>
+            <span class="tag state-${(c.state||"").toLowerCase()}">${applicantStateLabels[c.state] || c.state}</span>
+            <a href="#" class="review-toggle" data-id="${c.id}">Rever</a>
+          </div>
+          <div class="triagem-panel" id="triagem-${c.id}">
+            <div class="triagem-fields">
+              <div><label>Habilitação</label>${triSelect("habilitOk", c.id, c.habilitOk)}</div>
+              <div><label>Vínculo</label>${triSelect("vinculoOk", c.id, c.vinculoOk)}</div>
+              <div><label>Documentos</label>${triSelect("docsOk", c.id, c.docsOk)}</div>
+              <div><label>Experiência</label>${triSelect("expOk", c.id, c.expOk)}</div>
+            </div>
+            <div class="field" style="margin-bottom:10px;">
+              <label style="font-size:0.78rem; color:var(--ink-soft);">Motivo de exclusão (se aplicável)</label>
+              <textarea id="motivo-${c.id}" style="width:100%; min-height:60px; padding:8px 10px; border:1px solid var(--line); border-radius:3px; font-family:var(--sans);">${c.motivoExclusao || ""}</textarea>
+            </div>
+            <button class="btn btn-primary btn-save-triagem" data-id="${c.id}" style="font-size:0.85rem; padding:8px 16px;">Guardar triagem</button>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".review-toggle").forEach(a => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById("triagem-" + a.dataset.id).classList.toggle("open");
+      }));
+
+      document.querySelectorAll(".btn-save-triagem").forEach(btn => btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const readTri = field => {
+          const v = document.getElementById(`${field}-${id}`).value;
+          return v === "" ? null : v === "true";
+        };
+        const payload = {
+          habilitOk: readTri("habilitOk"),
+          vinculoOk: readTri("vinculoOk"),
+          docsOk: readTri("docsOk"),
+          expOk: readTri("expOk"),
+          motivoExclusao: document.getElementById("motivo-" + id).value.trim() || null,
+        };
+        apiFetch(`/api/backoffice/candidatos/${id}/triagem`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).then(res => {
+          showMsg(res.ok ? "Triagem guardada." : "Não foi possível guardar a triagem.", res.ok);
+          if (res.ok) loadCandidates();
+        });
+      }));
+    }).catch(() => {
+      document.getElementById("candidates-list").innerHTML = '<div class="empty-state">Não foi possível carregar os candidatos.</div>';
+    });
+  }
+
+  apiFetch("/api/auth/me").then(r => r.json()).then(user => {
+    canManageVaga = ["ADMIN", "CDRH", "GESTOR_RH"].includes(user.role);
+    loadVaga();
+    loadCandidates();
+  });
+</script>
+</body>
+</html>
