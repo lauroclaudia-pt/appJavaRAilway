@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Locais de Trabalho — Plataforma de Recrutamento do IPMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 380px 1fr; gap: 0; align-items: start; }
+  .layout .panel { padding: 40px; }
+  .layout .panel-form { border-right: 1px solid var(--line); }
+  .form-note { font-size: 0.82rem; color: var(--mist); margin-top: 4px; }
+  .form-success { background: #eaf6f0; border: 1px solid var(--teal); color: var(--teal-dark); padding: 12px 14px; border-radius: 3px; font-size: 0.88rem; margin-bottom: 20px; display: none; }
+  .form-success.visible { display: block; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tag.state-active { color: var(--teal-dark); border-color: var(--teal); }
+  .tag.state-inactive { color: var(--danger); border-color: var(--danger); }
+  .row-actions { display: flex; gap: 10px; font-size: 0.82rem; }
+  .row-actions a { color: var(--mist); }
+  .row-actions a:hover { color: var(--navy-deep); }
+  .row-actions .delete-link:hover { color: var(--danger); }
+  .cancel-edit { font-size: 0.85rem; color: var(--mist); margin-top: 10px; display: none; text-align: center; }
+  .cancel-edit.visible { display: block; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    .layout .panel-form { border-right: none; border-bottom: 1px solid var(--line); }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
+  <nav class="nav">
+    <a href="/dashboard.html">Painel</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="#" class="btn btn-ghost" id="logout-link">Sair</a>
+  </nav>
+</header>
+
+<div class="dash-header" style="padding-bottom: 20px;">
+  <p style="margin:0 0 4px;"><a href="/admin.html">&larr; Administração</a></p>
+  <h1>Locais de trabalho</h1>
+  <p>Locais disponíveis para associar a uma vaga. O estado é calculado a partir da data de início/fim.</p>
+</div>
+
+<div class="layout">
+  <div class="panel panel-form">
+    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;" id="form-title">Novo local</h3>
+
+    <div class="form-success" id="success-box">Guardado com sucesso.</div>
+    <div class="form-error" id="error-box"></div>
+
+    <form id="loc-form" novalidate>
+      <input type="hidden" id="loc-id" value="">
+
+      <div class="field">
+        <label for="displayName">Designação</label>
+        <input type="text" id="displayName" required placeholder="ex.: Faro">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="district">Distrito</label>
+          <input type="text" id="district" required>
+        </div>
+        <div class="field">
+          <label for="municipality">Concelho</label>
+          <input type="text" id="municipality" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="address">Morada</label>
+        <input type="text" id="address">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="startDate">Data de início</label>
+          <input type="datetime-local" id="startDate" required>
+        </div>
+        <div class="field">
+          <label for="endDate">Data de fim</label>
+          <input type="datetime-local" id="endDate">
+          <div class="form-note">Em branco = sem data de fim.</div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; justify-content:center;">Criar local</button>
+      <div class="cancel-edit" id="cancel-edit"><a href="#">Cancelar edição</a></div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="section-head" style="margin-bottom:24px;">
+      <h3 style="font-family:var(--serif); font-size:1.2rem;">Locais existentes</h3>
+      <span class="meta" id="locs-meta"></span>
+    </div>
+    <div class="bulletin" id="locs-list">
+      <div class="empty-state">A carregar…</div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
+
+  apiFetch("/api/auth/me").then(r => r.json()).then(user => {
+    if (!hasRole(user, "ADMIN")) window.location.href = "/dashboard.html";
+  });
+
+  function toLocalInputValue(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function resetForm() {
+    document.getElementById("form-title").textContent = "Novo local";
+    document.getElementById("loc-form").reset();
+    document.getElementById("loc-id").value = "";
+    document.getElementById("startDate").value = toLocalInputValue(new Date().toISOString());
+    document.getElementById("endDate").value = "";
+    document.getElementById("submit-btn").textContent = "Criar local";
+    document.getElementById("cancel-edit").classList.remove("visible");
+    document.getElementById("error-box").classList.remove("visible");
+    document.getElementById("success-box").classList.remove("visible");
+  }
+
+  function startEdit(loc) {
+    document.getElementById("form-title").textContent = "Editar local";
+    document.getElementById("loc-id").value = loc.id;
+    document.getElementById("displayName").value = loc.displayName;
+    document.getElementById("district").value = loc.district;
+    document.getElementById("municipality").value = loc.municipality;
+    document.getElementById("address").value = loc.address || "";
+    document.getElementById("startDate").value = toLocalInputValue(loc.startDate);
+    document.getElementById("endDate").value = toLocalInputValue(loc.endDate);
+    document.getElementById("submit-btn").textContent = "Guardar alterações";
+    document.getElementById("cancel-edit").classList.add("visible");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.getElementById("cancel-edit").addEventListener("click", (e) => { e.preventDefault(); resetForm(); });
+
+  function stateOf(loc) {
+    const now = new Date();
+    const start = new Date(loc.startDate);
+    const end = loc.endDate ? new Date(loc.endDate) : null;
+    return start <= now && (!end || end > now);
+  }
+
+  function loadLocs() {
+    apiFetch("/api/admin/work-locations")
+      .then(r => r.json())
+      .then(locs => {
+        document.getElementById("locs-meta").textContent = locs.length + " local(is)";
+        if (locs.length === 0) {
+          document.getElementById("locs-list").innerHTML = '<div class="empty-state">Ainda não existem locais de trabalho.</div>';
+          return;
+        }
+        document.getElementById("locs-list").innerHTML = locs.map(loc => {
+          const ativo = stateOf(loc);
+          return `
+            <div class="bulletin-row">
+              <div>
+                <span class="title">${loc.displayName}</span>
+                <span class="subtitle">${loc.municipality}, ${loc.district}${loc.address ? " — " + loc.address : ""}</span>
+                <div class="row-actions" style="margin-top:6px;">
+                  <a href="#" class="edit-link" data-id="${loc.id}">Editar</a>
+                  <a href="#" class="delete-link" data-id="${loc.id}">Apagar</a>
+                </div>
+              </div>
+              <span class="tag ${ativo ? 'state-active' : 'state-inactive'}">${ativo ? "Ativo" : "Inativo"}</span>
+            </div>
+          `;
+        }).join("");
+
+        document.querySelectorAll(".edit-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          startEdit(locs.find(l => l.id == a.dataset.id));
+        }));
+        document.querySelectorAll(".delete-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const loc = locs.find(l => l.id == a.dataset.id);
+          if (confirm(`Apagar o local "${loc.displayName}"? Esta ação não pode ser desfeita.`)) {
+            apiFetch("/api/admin/work-locations/" + loc.id, { method: "DELETE" }).then(res => {
+              if (res.ok) loadLocs();
+              else alert("Não foi possível apagar este local (pode estar associado a uma vaga).");
+            });
+          }
+        }));
+      })
+      .catch(() => {
+        document.getElementById("locs-list").innerHTML = '<div class="empty-state">Não foi possível carregar os locais.</div>';
+      });
+  }
+
+  resetForm();
+  loadLocs();
+
+  const form = document.getElementById("loc-form");
+  const errorBox = document.getElementById("error-box");
+  const successBox = document.getElementById("success-box");
+  const submitBtn = document.getElementById("submit-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("visible");
+    successBox.classList.remove("visible");
+
+    const id = document.getElementById("loc-id").value;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "A guardar…";
+
+    const payload = {
+      displayName: document.getElementById("displayName").value.trim(),
+      district: document.getElementById("district").value.trim(),
+      municipality: document.getElementById("municipality").value.trim(),
+      address: document.getElementById("address").value.trim() || null,
+      startDate: document.getElementById("startDate").value || null,
+      endDate: document.getElementById("endDate").value || null,
+    };
+
+    const url = id ? "/api/admin/work-locations/" + id : "/api/admin/work-locations";
+    const method = id ? "PUT" : "POST";
+
+    try {
+      const res = await apiFetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        successBox.textContent = id ? "Local atualizado com sucesso." : "Local criado com sucesso.";
+        successBox.classList.add("visible");
+        resetForm();
+        loadLocs();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        errorBox.textContent = data.message || "Não foi possível guardar o local.";
+        errorBox.classList.add("visible");
+      }
+    } catch (err) {
+      errorBox.textContent = "Falha de ligação ao servidor.";
+      errorBox.classList.add("visible");
+    } finally {
+      submitBtn.disabled = false;
+      const stillEditing = document.getElementById("loc-id").value;
+      submitBtn.textContent = stillEditing ? "Guardar alterações" : "Criar local";
+    }
+  });
+</script>
+</body>
+</html>

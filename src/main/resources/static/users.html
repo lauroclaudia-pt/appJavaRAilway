@@ -10,7 +10,7 @@
 <link rel="icon" href="/img/ipma-mark.png" type="image/png">
 <link rel="stylesheet" href="/css/style.css">
 <style>
-  .layout { display: grid; grid-template-columns: 380px 1fr; gap: 0; align-items: start; }
+  .layout { display: grid; grid-template-columns: 400px 1fr; gap: 0; align-items: start; }
   .layout .panel { padding: 40px; }
   .layout .panel-form { border-right: 1px solid var(--line); }
   .form-note { font-size: 0.82rem; color: var(--mist); margin-top: 4px; }
@@ -26,9 +26,19 @@
   .login-fields.visible { display: block; }
   .badge-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--line); color: var(--ink-soft); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tag.state-active { color: var(--teal-dark); border-color: var(--teal); }
+  .tag.state-inactive { color: var(--danger); border-color: var(--danger); }
+  .row-actions { display: flex; gap: 10px; font-size: 0.82rem; margin-top: 6px; }
+  .row-actions a { color: var(--mist); }
+  .row-actions a:hover { color: var(--navy-deep); }
+  .row-actions .delete-link:hover { color: var(--danger); }
+  .cancel-edit { font-size: 0.85rem; color: var(--mist); margin-top: 10px; display: none; text-align: center; }
+  .cancel-edit.visible { display: block; }
   @media (max-width: 860px) {
     .layout { grid-template-columns: 1fr; }
     .layout .panel-form { border-right: none; border-bottom: 1px solid var(--line); }
+    .field-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -46,17 +56,19 @@
 <div class="dash-header" style="padding-bottom: 20px;">
   <p style="margin:0 0 4px;"><a href="/admin.html">&larr; Administração</a></p>
   <h1>Trabalhadores</h1>
-  <p>Pessoas que podem ser indicadas em procedimentos (Gestor de RH, Júri, CDRH). O acesso de login é opcional — um membro de júri pode não ter conta na plataforma.</p>
+  <p>Pessoas que podem ser indicadas em procedimentos (Gestor de RH, Júri, CDRH). O acesso de login é opcional. O estado é calculado a partir da data de início/fim.</p>
 </div>
 
 <div class="layout">
   <div class="panel panel-form">
-    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;">Novo trabalhador</h3>
+    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;" id="form-title">Novo trabalhador</h3>
 
-    <div class="form-success" id="success-box">Trabalhador criado com sucesso.</div>
+    <div class="form-success" id="success-box">Guardado com sucesso.</div>
     <div class="form-error" id="error-box"></div>
 
     <form id="user-form" novalidate>
+      <input type="hidden" id="user-id" value="">
+
       <div class="field">
         <label for="name">Nome completo</label>
         <input type="text" id="name" name="name" required>
@@ -72,8 +84,20 @@
         </div>
       </div>
 
+      <div class="field-row">
+        <div class="field">
+          <label for="startDate">Data de início</label>
+          <input type="datetime-local" id="startDate" required>
+        </div>
+        <div class="field">
+          <label for="endDate">Data de fim</label>
+          <input type="datetime-local" id="endDate">
+          <div class="form-note">Em branco = sem data de fim.</div>
+        </div>
+      </div>
+
       <label class="login-toggle">
-        <input type="checkbox" id="toggle-login"> Criar acesso de login para este trabalhador
+        <input type="checkbox" id="toggle-login"> Este trabalhador tem acesso de login
       </label>
 
       <div class="login-fields" id="login-fields">
@@ -82,13 +106,14 @@
           <input type="email" id="email" name="email">
         </div>
         <div class="field">
-          <label for="password">Palavra-passe inicial</label>
+          <label for="password">Palavra-passe</label>
           <input type="password" id="password" name="password" minlength="8">
-          <div class="form-note">Mínimo 8 caracteres. Deve ser alterada no primeiro acesso.</div>
+          <div class="form-note" id="password-note">Mínimo 8 caracteres.</div>
         </div>
       </div>
 
       <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; justify-content:center;">Criar trabalhador</button>
+      <div class="cancel-edit" id="cancel-edit"><a href="#">Cancelar edição</a></div>
     </form>
   </div>
 
@@ -109,11 +134,8 @@
 
   document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
 
-  // Só ADMIN acede a esta página.
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    if (!hasRole(user, "ADMIN")) {
-      window.location.href = "/dashboard.html";
-    }
+    if (!hasRole(user, "ADMIN")) window.location.href = "/dashboard.html";
   });
 
   const toggleLogin = document.getElementById("toggle-login");
@@ -121,8 +143,57 @@
   toggleLogin.addEventListener("change", () => {
     loginFields.classList.toggle("visible", toggleLogin.checked);
     document.getElementById("email").required = toggleLogin.checked;
-    document.getElementById("password").required = toggleLogin.checked;
   });
+
+  function toLocalInputValue(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function resetForm() {
+    document.getElementById("form-title").textContent = "Novo trabalhador";
+    document.getElementById("user-form").reset();
+    document.getElementById("user-id").value = "";
+    document.getElementById("startDate").value = toLocalInputValue(new Date().toISOString());
+    document.getElementById("endDate").value = "";
+    toggleLogin.checked = false;
+    loginFields.classList.remove("visible");
+    document.getElementById("password").required = false;
+    document.getElementById("password-note").textContent = "Mínimo 8 caracteres.";
+    document.getElementById("submit-btn").textContent = "Criar trabalhador";
+    document.getElementById("cancel-edit").classList.remove("visible");
+    document.getElementById("error-box").classList.remove("visible");
+    document.getElementById("success-box").classList.remove("visible");
+  }
+
+  function startEdit(u) {
+    document.getElementById("form-title").textContent = "Editar trabalhador";
+    document.getElementById("user-id").value = u.id;
+    document.getElementById("name").value = u.name;
+    document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => {
+      cb.checked = (u.responsabilidades || []).includes(cb.value);
+    });
+    document.getElementById("startDate").value = toLocalInputValue(u.startDate);
+    document.getElementById("endDate").value = toLocalInputValue(u.endDate);
+
+    const hasLogin = !!u.email;
+    toggleLogin.checked = hasLogin;
+    loginFields.classList.toggle("visible", hasLogin);
+    document.getElementById("email").value = u.email || "";
+    document.getElementById("password").value = "";
+    document.getElementById("password").required = false;
+    document.getElementById("password-note").textContent = hasLogin
+      ? "Deixe em branco para manter a palavra-passe atual."
+      : "Mínimo 8 caracteres.";
+
+    document.getElementById("submit-btn").textContent = "Guardar alterações";
+    document.getElementById("cancel-edit").classList.add("visible");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.getElementById("cancel-edit").addEventListener("click", (e) => { e.preventDefault(); resetForm(); });
 
   function loadUsers() {
     apiFetch("/api/admin/users")
@@ -141,15 +212,37 @@
               <div class="badge-list">
                 ${(u.responsabilidades || []).map(r => `<span class="badge">${roleLabel(r)}</span>`).join("") || '<span class="badge">Sem responsabilidade atribuída</span>'}
               </div>
+              <div class="row-actions">
+                <a href="#" class="edit-link" data-id="${u.id}">Editar</a>
+                <a href="#" class="delete-link" data-id="${u.id}">Apagar</a>
+              </div>
             </div>
-            <span class="deadline">${u.active ? "Ativo" : "Inativo"}</span>
+            <span class="tag ${u.active ? 'state-active' : 'state-inactive'}">${u.active ? "Ativo" : "Inativo"}</span>
           </div>
         `).join("");
+
+        document.querySelectorAll(".edit-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const u = users.find(x => x.id == a.dataset.id);
+          startEdit(u);
+        }));
+        document.querySelectorAll(".delete-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const u = users.find(x => x.id == a.dataset.id);
+          if (confirm(`Apagar o trabalhador "${u.name}"? Esta ação não pode ser desfeita.`)) {
+            apiFetch("/api/admin/users/" + u.id, { method: "DELETE" }).then(res => {
+              if (res.ok) loadUsers();
+              else alert("Não foi possível apagar este trabalhador (pode estar associado a uma vaga).");
+            });
+          }
+        }));
       })
       .catch(() => {
         document.getElementById("users-list").innerHTML = '<div class="empty-state">Não foi possível carregar os trabalhadores.</div>';
       });
   }
+
+  resetForm();
   loadUsers();
 
   const form = document.getElementById("user-form");
@@ -169,31 +262,37 @@
       return;
     }
 
+    const id = document.getElementById("user-id").value;
     submitBtn.disabled = true;
-    submitBtn.textContent = "A criar…";
+    submitBtn.textContent = "A guardar…";
 
     const payload = {
       name: document.getElementById("name").value.trim(),
       email: toggleLogin.checked ? document.getElementById("email").value.trim() : null,
       password: toggleLogin.checked ? document.getElementById("password").value : null,
       roles,
+      startDate: document.getElementById("startDate").value || null,
+      endDate: document.getElementById("endDate").value || null,
     };
 
+    const url = id ? "/api/admin/users/" + id : "/api/admin/users";
+    const method = id ? "PUT" : "POST";
+
     try {
-      const res = await apiFetch("/api/admin/users", {
-        method: "POST",
+      const res = await apiFetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
+        successBox.textContent = id ? "Trabalhador atualizado com sucesso." : "Trabalhador criado com sucesso.";
         successBox.classList.add("visible");
-        form.reset();
-        loginFields.classList.remove("visible");
+        resetForm();
         loadUsers();
       } else {
         const data = await res.json().catch(() => ({}));
-        errorBox.textContent = data.message || "Não foi possível criar o trabalhador.";
+        errorBox.textContent = data.message || "Não foi possível guardar o trabalhador.";
         errorBox.classList.add("visible");
       }
     } catch (err) {
@@ -201,7 +300,8 @@
       errorBox.classList.add("visible");
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Criar trabalhador";
+      const stillEditing = document.getElementById("user-id").value;
+      submitBtn.textContent = stillEditing ? "Guardar alterações" : "Criar trabalhador";
     }
   });
 </script>

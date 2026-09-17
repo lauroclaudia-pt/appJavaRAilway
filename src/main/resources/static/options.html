@@ -142,9 +142,8 @@
     const now = new Date();
     const start = new Date(opt.startDate);
     const end = opt.endDate ? new Date(opt.endDate) : null;
-    if (start > now) return { label: "Agendada", cls: "state-scheduled" };
-    if (end && end <= now) return { label: "Expirada", cls: "state-expired" };
-    return { label: "Ativa", cls: "state-active" };
+    const ativo = start <= now && (!end || end > now);
+    return ativo ? { label: "Ativo", cls: "state-active" } : { label: "Inativo", cls: "state-expired" };
   }
 
   function fmt(iso) {
