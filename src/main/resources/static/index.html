@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPMA Recrutamento — Concursos, Mobilidade e Bolsas de Investigação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <nav class="nav">
+    <a href="/index.html" class="current">Início</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="/login.html" class="btn btn-ghost">Entrar</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow">Recrutamento e mobilidade — IPMA, I.P.</p>
+    <h1>O talento que mede o tempo, o mar e o clima de Portugal.</h1>
+    <p class="lede">Concursos públicos, mobilidade e bolsas de investigação científica do Instituto Português do Mar e da Atmosfera, num único lugar.</p>
+    <div class="hero-ctas">
+      <a href="/jobs.html" class="btn btn-primary">Ver ofertas abertas</a>
+      <a href="/login.html" class="btn btn-ghost">Acesso interno</a>
+    </div>
+    <div class="hero-stats">
+      <div><span class="stat-value" id="stat-open">—</span><span class="stat-label">ofertas em curso</span></div>
+      <div><span class="stat-value">10</span><span class="stat-label">locais de trabalho</span></div>
+      <div><span class="stat-value">LTFP</span><span class="stat-label">art.º 36.º — métodos de seleção</span></div>
+    </div>
+  </div>
+  <div class="hero-graphic" aria-hidden="true">
+    <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+      <path class="draw" d="M -20 120 C 80 60, 160 180, 260 110 S 420 40, 520 100" fill="none" stroke="#2f8f8b" stroke-width="1.5"/>
+      <path class="draw" d="M -20 220 C 90 170, 170 270, 270 210 S 430 150, 520 205" fill="none" stroke="#7b97b0" stroke-width="1.5"/>
+      <path class="draw" d="M -20 320 C 100 280, 180 360, 280 310 S 440 260, 520 305" fill="none" stroke="#c7d6e2" stroke-width="1.5"/>
+      <path class="draw" d="M -20 400 C 90 460, 190 380, 290 430 S 430 480, 520 420" fill="none" stroke="#123a5e" stroke-width="1.5"/>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Como funciona</h2>
+  </div>
+  <div class="columns-3">
+    <div>
+      <h3>Concursos públicos</h3>
+      <p>Procedimentos concursais comuns, de mobilidade interna e intercarreiras, concursos de dirigentes e bolsas de investigação científica, nos termos da LTFP.</p>
+    </div>
+    <div>
+      <h3>Como concorrer</h3>
+      <ol class="steps">
+        <li>Consulte o edital e os requisitos de admissão da oferta.</li>
+        <li>Submeta a candidatura no prazo, com os documentos exigidos.</li>
+        <li>Acompanhe cada fase do procedimento por email.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Acesso interno</h3>
+      <p>Área reservada a gestores de recursos humanos, membros de júri e administração, para gerir vagas, triagem e atas dos procedimentos.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div><strong>Instituto Português do Mar e da Atmosfera, I.P.</strong><br>Rua C do Aeroporto, 1749-077 Lisboa</div>
+  <div>Divisão de Recursos Humanos<br><a href="/jobs.html">Consultar ofertas</a></div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+  fetch("/api/public/jobs")
+    .then(r => r.ok ? r.json() : [])
+    .then(jobs => { document.getElementById("stat-open").textContent = jobs.length; })
+    .catch(() => {});
+</script>
+</body>
+</html>

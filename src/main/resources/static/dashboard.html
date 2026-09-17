@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Interno — IPMA Recrutamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <nav class="nav">
+    <a href="/index.html">Início</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="#" class="btn btn-ghost" id="logout-link">Sair</a>
+  </nav>
+</header>
+
+<div class="dash-header">
+  <span class="role-tag" id="role-tag">—</span>
+  <h1 id="welcome">Bem-vindo(a)</h1>
+  <p id="welcome-sub">A carregar o seu perfil…</p>
+</div>
+
+<div class="dash-grid" id="dash-grid"></div>
+
+<section class="section" style="border-top:1px solid var(--line); border-bottom:none;">
+  <div class="section-head">
+    <h2>Vagas no sistema</h2>
+    <span class="meta" id="vagas-meta"></span>
+  </div>
+  <div class="bulletin" id="vagas-list">
+    <div class="empty-state">A carregar…</div>
+  </div>
+</section>
+
+<script src="/js/app.js"></script>
+<script>
+  requireAuth();
+
+  document.getElementById("logout-link").addEventListener("click", (e) => {
+    e.preventDefault();
+    logout();
+  });
+
+  const CARDS_BY_ROLE = {
+    ADMIN: [
+      { title: "Gerir utilizadores", desc: "Criar contas para Gestores de RH, Júri e CDRH.", href: "#", note: "Via API: POST /api/admin/users" },
+      { title: "Todas as vagas", desc: "Consultar o estado de todos os procedimentos em curso.", href: "#vagas" },
+      { title: "Ofertas públicas", desc: "Ver o que está publicado no website.", href: "/jobs.html" },
+    ],
+    CDRH: [
+      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "#", note: "Via API: POST /api/backoffice/vagas" },
+      { title: "Triagem de candidatos", desc: "Verificar requisitos de admissão por vaga.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+    ],
+    GESTOR_RH: [
+      { title: "Abrir vaga", desc: "Criar um novo procedimento concursal ou bolsa.", href: "#", note: "Via API: POST /api/backoffice/vagas" },
+      { title: "Triagem de candidatos", desc: "Verificar requisitos de admissão por vaga.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+    ],
+    JURI: [
+      { title: "Candidatos por vaga", desc: "Consultar as candidaturas do procedimento em que participa.", href: "#vagas" },
+      { title: "Gerar Ata", desc: "Emitir a lista de admitidos e excluídos em PDF.", href: "#", note: "Via API: GET /api/backoffice/vagas/{id}/ata" },
+    ],
+    PORTAL: [
+      { title: "A sua candidatura", desc: "Acompanhe o estado da sua candidatura pelo número de referência recebido por email.", href: "#" },
+      { title: "Ofertas abertas", desc: "Consultar novas oportunidades no IPMA.", href: "/jobs.html" },
+    ],
+  };
+
+  function roleLabel(role) {
+    return { ADMIN: "Administrador", CDRH: "Chefe de Divisão de RH", GESTOR_RH: "Gestor de RH", JURI: "Membro do Júri", PORTAL: "Candidato" }[role] || role;
+  }
+
+  apiFetch("/api/auth/me")
+    .then(r => r.json())
+    .then(user => {
+      document.getElementById("role-tag").textContent = roleLabel(user.role);
+      document.getElementById("welcome").textContent = "Bem-vindo(a), " + user.name;
+      document.getElementById("welcome-sub").textContent = user.email;
+
+      const cards = CARDS_BY_ROLE[user.role] || [];
+      document.getElementById("dash-grid").innerHTML = cards.map(c => `
+        <div class="dash-card">
+          <h3>${c.title}</h3>
+          <p>${c.desc}${c.note ? "<br><em>" + c.note + "</em>" : ""}</p>
+          <a class="btn btn-ghost" href="${c.href}">Abrir</a>
+        </div>
+      `).join("");
+
+      if (["ADMIN", "CDRH", "GESTOR_RH", "JURI"].includes(user.role)) {
+        loadVagas();
+      } else {
+        document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Sem vagas internas para o seu perfil.</div>';
+      }
+    })
+    .catch(() => {
+      document.getElementById("welcome-sub").textContent = "Não foi possível confirmar a sessão.";
+    });
+
+  function loadVagas() {
+    apiFetch("/api/backoffice/vagas")
+      .then(r => r.json())
+      .then(vagas => {
+        document.getElementById("vagas-meta").textContent = vagas.length + " vaga(s)";
+        if (vagas.length === 0) {
+          document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Ainda não existem vagas criadas.</div>';
+          return;
+        }
+        document.getElementById("vagas-list").innerHTML = vagas.map(v => `
+          <div class="bulletin-row" id="job-${v.id}">
+            <div>
+              <span class="title">${v.name}</span>
+              <span class="subtitle">${v.jobPosition || ""} · Código ${v.vagaCode || "—"}</span>
+            </div>
+            <span class="tag state-${(v.state || "").toLowerCase()}">${v.state}</span>
+            <span class="deadline">Etapa: ${v.currentStageCode || "—"}</span>
+          </div>
+        `).join("");
+      })
+      .catch(() => {
+        document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Não foi possível carregar as vagas.</div>';
+      });
+  }
+</script>
+</body>
+</html>

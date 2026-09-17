@@ -108,6 +108,10 @@ public class VagaService {
         return vagaRepository.findByWebsitePublishedTrueAndDeadlineDateAfter(LocalDateTime.now());
     }
 
+    public List<Vaga> listAll() {
+        return vagaRepository.findAll();
+    }
+
     public Vaga getOrThrow(Long id) {
         return vagaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vaga não encontrada: " + id));

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ofertas Abertas — IPMA Recrutamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <nav class="nav">
+    <a href="/index.html">Início</a>
+    <a href="/jobs.html" class="current">Ofertas</a>
+    <a href="/login.html" class="btn btn-ghost">Entrar</a>
+  </nav>
+</header>
+
+<section class="section" style="border-bottom:none;">
+  <div class="section-head">
+    <h2>Ofertas abertas</h2>
+    <span class="meta" id="count-meta">a carregar…</span>
+  </div>
+  <div class="bulletin" id="bulletin-list">
+    <div class="empty-state">A carregar ofertas…</div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div><strong>Instituto Português do Mar e da Atmosfera, I.P.</strong><br>Rua C do Aeroporto, 1749-077 Lisboa</div>
+  <div><a href="/index.html">Página inicial</a></div>
+</footer>
+
+<script src="/js/app.js"></script>
+<script>
+  const list = document.getElementById("bulletin-list");
+  const meta = document.getElementById("count-meta");
+
+  function offerTypeLabel(t) {
+    const labels = {
+      PROCEDIMENTO_CONCURSAL_COMUM: "Procedimento Concursal Comum",
+      PROCEDIMENTO_CONCURSAL_RESERVA: "Procedimento Concursal — Reserva",
+      PROCEDIMENTO_CONCURSAL_SELECAO_INTERNACIONAL: "Seleção Internacional",
+      PROCEDIMENTO_CONCURSAL_CARGOS_DIRECAO: "Concurso de Dirigentes",
+      MOBILIDADE_INTERNA: "Mobilidade Interna",
+      MOBILIDADE_INTERCARREIRAS: "Mobilidade Intercarreiras",
+      BOLSA_INVESTIGACAO_CIENTIFICA: "Bolsa de Investigação Científica",
+    };
+    return labels[t] || t;
+  }
+
+  fetch("/api/public/jobs")
+    .then(r => r.json())
+    .then(jobs => {
+      meta.textContent = jobs.length + (jobs.length === 1 ? " oferta em curso" : " ofertas em curso");
+      if (jobs.length === 0) {
+        list.innerHTML = '<div class="empty-state">Não há ofertas abertas neste momento. Volte a consultar em breve.</div>';
+        return;
+      }
+      list.innerHTML = jobs.map(job => `
+        <a class="bulletin-row" href="/jobs.html#job-${job.id}" style="text-decoration:none; color:inherit;">
+          <div>
+            <span class="title">${job.name}</span>
+            <span class="subtitle">${offerTypeLabel(job.offerType)} · Código ${job.vagaCode || "—"}</span>
+          </div>
+          <span class="tag state-${(job.state || "").toLowerCase()}">${job.jobPosition || ""}</span>
+          <span class="deadline">Prazo: ${formatDate(job.deadlineDate)}</span>
+        </a>
+      `).join("");
+    })
+    .catch(() => {
+      meta.textContent = "";
+      list.innerHTML = '<div class="empty-state">Não foi possível carregar as ofertas. Tente novamente mais tarde.</div>';
+    });
+</script>
+</body>
+</html>

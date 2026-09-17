@@ -28,6 +28,12 @@ public class BackOfficeVagaController {
         return vagaService.getOrThrow(id);
     }
 
+    /** Listagem interna de todas as vagas (qualquer estado) para o BackOffice. */
+    @GetMapping
+    public java.util.List<Vaga> listAll() {
+        return vagaService.listAll();
+    }
+
     @PostMapping("/{id}/publish")
     public Vaga publish(@PathVariable Long id, @RequestParam String vagaCode) {
         return vagaService.publish(id, vagaCode);

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar — IPMA Recrutamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <nav class="nav">
+    <a href="/index.html">Início</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="/login.html" class="current">Entrar</a>
+  </nav>
+</header>
+
+<div class="auth-wrap">
+  <div class="auth-side">
+    <div class="quote">
+      "Cada procedimento acompanhado com o mesmo rigor com que se lê uma carta de tempo."
+      <small>Divisão de Recursos Humanos — IPMA, I.P.</small>
+    </div>
+    <svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M -20 130 C 90 70, 180 190, 290 120 S 460 60, 560 110" fill="none" stroke="#2f8f8b" stroke-width="1.2"/>
+      <path d="M -20 260 C 100 210, 190 310, 300 250 S 470 190, 560 240" fill="none" stroke="#c7d6e2" stroke-width="1.2"/>
+      <path d="M -20 400 C 100 450, 200 370, 300 420 S 460 470, 560 410" fill="none" stroke="#7b97b0" stroke-width="1.2"/>
+    </svg>
+  </div>
+
+  <div class="auth-form-col">
+    <h1>Entrar</h1>
+    <p class="subtitle">Acesso reservado a gestores de recursos humanos, membros de júri e administração.</p>
+
+    <div class="form-error" id="error-box"></div>
+
+    <form id="login-form" novalidate>
+      <div class="field">
+        <label for="email">Email institucional</label>
+        <input type="email" id="email" name="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Palavra-passe</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit" id="submit-btn">Entrar</button>
+    </form>
+
+    <p class="back-link"><a href="/index.html">&larr; Voltar à página inicial</a></p>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  const form = document.getElementById("login-form");
+  const errorBox = document.getElementById("error-box");
+  const submitBtn = document.getElementById("submit-btn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorBox.classList.remove("visible");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "A verificar…";
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: "Basic " + btoa(email + ":" + password) },
+      });
+
+      if (res.ok) {
+        setAuth(email, password);
+        window.location.href = "/dashboard.html";
+      } else if (res.status === 401 || res.status === 403) {
+        errorBox.textContent = "Email ou palavra-passe incorretos.";
+        errorBox.classList.add("visible");
+      } else {
+        errorBox.textContent = "Não foi possível confirmar as credenciais. Tente novamente.";
+        errorBox.classList.add("visible");
+      }
+    } catch (err) {
+      errorBox.textContent = "Falha de ligação ao servidor. Tente novamente.";
+      errorBox.classList.add("visible");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Entrar";
+    }
+  });
+
+  if (getAuth()) window.location.href = "/dashboard.html";
+</script>
+</body>
+</html>

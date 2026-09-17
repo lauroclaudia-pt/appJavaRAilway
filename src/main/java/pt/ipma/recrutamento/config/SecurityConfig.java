@@ -3,6 +3,7 @@ package pt.ipma.recrutamento.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -54,8 +55,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // API stateless; CSRF não aplicável (sem cookies de sessão de browser)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/*.html", "/css/**", "/js/**", "/img/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/public/**", "/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/api/auth/**").authenticated()
                 .requestMatchers("/api/portal/**").hasAnyRole("PORTAL", "ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/backoffice/vagas/**").hasAnyRole("GESTOR_RH", "CDRH", "JURI", "ADMIN")
                 .requestMatchers("/api/backoffice/vagas/**").hasAnyRole("GESTOR_RH", "CDRH", "ADMIN")
                 .requestMatchers("/api/backoffice/**").hasAnyRole("GESTOR_RH", "JURI", "CDRH", "ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
