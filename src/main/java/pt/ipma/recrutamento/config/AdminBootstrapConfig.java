@@ -6,6 +6,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import pt.ipma.recrutamento.domain.Responsabilidade;
 import pt.ipma.recrutamento.domain.Trabalhador;
 import pt.ipma.recrutamento.domain.enums.Role;
 import pt.ipma.recrutamento.repository.TrabalhadorRepository;
@@ -37,7 +38,7 @@ public class AdminBootstrapConfig {
             admin.setName("Administrador");
             admin.setEmail(adminEmail);
             admin.setPasswordHash(encoder.encode(password));
-            admin.setResponsabilidades(Set.of(Role.ADMIN));
+            admin.setResponsabilidades(Set.of(new Responsabilidade(Role.ADMIN, null, null)));
             repo.save(admin);
 
             log.warn("Trabalhador administrador criado: {} — defina ADMIN_PASSWORD nas variáveis de " +

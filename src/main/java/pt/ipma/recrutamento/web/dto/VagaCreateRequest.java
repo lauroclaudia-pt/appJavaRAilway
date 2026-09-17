@@ -1,5 +1,6 @@
 package pt.ipma.recrutamento.web.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import pt.ipma.recrutamento.domain.enums.OfferType;
@@ -23,12 +24,15 @@ public class VagaCreateRequest {
     private String regime;
     private BigDecimal salary;
     private BigDecimal salaryPlus;
+    /** Detalhes da Bolsa ou Remuneração — memo de texto livre. */
+    private String salaryInfo;
     private String vacancyRelation;
     private boolean allowNoDegree;
     private boolean vagasDeficiencia;
+    /** Requisitos de Constituição de RJ ou Contratação. */
     private String requirements;
     private String nivelHabilitacional;
-    private String websiteDescription;
+    @NotBlank private String websiteDescription;
     private boolean hasPc;
     private boolean hasAc;
     private boolean hasEac;
@@ -42,6 +46,6 @@ public class VagaCreateRequest {
     private Long juriVe2Id;
     private Long juriVs1Id;
     private Long juriVs2Id;
-    private Long workLocationId;
+    private Set<Long> workLocationIds;
     private Set<Long> departmentIds;
 }

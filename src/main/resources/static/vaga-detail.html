@@ -34,6 +34,17 @@
   .msg-inline { font-size: 0.85rem; padding: 8px 0; min-height: 1.4em; }
   .msg-inline.ok { color: var(--teal-dark); }
   .msg-inline.err { color: var(--danger); }
+  .doc-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .doc-row:first-child { border-top: 1px solid var(--line); }
+  .doc-row .doc-desc { font-size: 0.85rem; color: var(--mist); display: block; margin-top: 2px; }
+  .doc-upload-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; padding: 20px 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .doc-upload-form .field { margin-bottom: 0; }
+  .doc-upload-form label { font-size: 0.78rem; color: var(--ink-soft); display:block; margin-bottom:4px; }
+  .doc-upload-form select, .doc-upload-form input { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 3px; font-size: 0.88rem; }
+  .doc-public-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--ink-soft); margin-top: 6px; }
+  @media (max-width: 860px) {
+    .doc-upload-form { grid-template-columns: 1fr; }
+  }
   @media (max-width: 860px) {
     .info-grid { grid-template-columns: 1fr 1fr; padding-left:20px; padding-right:20px; }
     .actions-bar { padding-left:20px; padding-right:20px; }
@@ -67,6 +78,17 @@
 <div class="actions-bar" id="actions-bar"></div>
 <div class="msg-inline" id="action-msg" style="padding-left:40px;"></div>
 
+<section class="section">
+  <div class="section-head">
+    <h2>Documentos</h2>
+    <span class="meta" id="docs-meta"></span>
+  </div>
+
+  <div id="docs-upload-wrap"></div>
+
+  <div id="docs-list"><div class="empty-state">A carregar…</div></div>
+</section>
+
 <section class="section" style="border-bottom:none;">
   <div class="section-head">
     <h2>Candidatos</h2>
@@ -85,6 +107,7 @@
   if (!vagaId) window.location.href = "/dashboard.html";
 
   let canManageVaga = false;
+  let canDelete = false;
 
   const offerTypeLabels = {
     PROCEDIMENTO_CONCURSAL_COMUM: "Procedimento Concursal Comum",
@@ -133,7 +156,7 @@
         <div><div class="label">N.º de vagas</div><div class="value">${vaga.noOfRecruitment ?? "—"}</div></div>
         <div><div class="label">Prazo de candidatura</div><div class="value">${fmtDate(vaga.deadlineDate)}</div></div>
         <div><div class="label">Unidade(s) orgânica(s)</div><div class="value">${depts}</div></div>
-        <div><div class="label">Local de trabalho</div><div class="value">${vaga.workLocation ? vaga.workLocation.displayName : "—"}</div></div>
+        <div><div class="label">Local(is) de trabalho</div><div class="value">${(vaga.workLocations || []).map(w => w.displayName).join(", ") || "—"}</div></div>
         <div><div class="label">Vínculo</div><div class="value">${vaga.vinculo || "—"}</div></div>
         <div><div class="label">Regime</div><div class="value">${vaga.regime || "—"}</div></div>
       `;
@@ -175,6 +198,10 @@
       </label>
       <button class="btn btn-primary" id="btn-gerar-ata">Gerar Ata (PDF)</button>
     `;
+
+    if (canDelete) {
+      html += `<button class="btn btn-ghost" id="btn-apagar-vaga" style="color:var(--danger); border-color:var(--danger);">Apagar procedimento</button>`;
+    }
 
     bar.innerHTML = html;
 
@@ -227,6 +254,20 @@
         .then(() => showMsg("Ata gerada.", true))
         .catch(() => showMsg("Não foi possível gerar a ata.", false));
     });
+
+    const btnApagar = document.getElementById("btn-apagar-vaga");
+    if (btnApagar) {
+      btnApagar.addEventListener("click", () => {
+        if (!confirm(`Apagar definitivamente o procedimento "${vaga.name}"? Esta ação não pode ser desfeita.`)) return;
+        apiFetch(`/api/backoffice/vagas/${vagaId}`, { method: "DELETE" }).then(res => {
+          if (res.ok) {
+            window.location.href = "/dashboard.html";
+          } else {
+            res.json().then(d => showMsg(d.message || "Não foi possível apagar (pode já ter candidaturas associadas).", false)).catch(() => {});
+          }
+        });
+      });
+    }
   }
 
   function triSelect(field, candidateId, current) {
@@ -303,10 +344,106 @@
     });
   }
 
+  const DOC_TYPES = [
+    { value: "ata_abertura", label: "Ata de Abertura de Procedimento" },
+    { value: "detalhe_oferta_bep", label: "Detalhe de Oferta BEP" },
+    { value: "aviso_dre", label: "Aviso DRE" },
+    { value: "edital", label: "Edital / Aviso de Abertura" },
+    { value: "ata_provisoria", label: "Ata Provisória" },
+    { value: "ata_final", label: "Ata Final" },
+    { value: "anexo_procedimento", label: "Anexo do Procedimento" },
+    { value: "outro", label: "Outro" },
+  ];
+
+  function docTypeLabel(v) {
+    return (DOC_TYPES.find(d => d.value === v) || {}).label || v || "Documento";
+  }
+
+  function renderUploadForm() {
+    const wrap = document.getElementById("docs-upload-wrap");
+    if (!canManageVaga) { wrap.innerHTML = ""; return; }
+    wrap.innerHTML = `
+      <form class="doc-upload-form" id="doc-upload-form">
+        <div class="field">
+          <label>Ficheiro</label>
+          <input type="file" id="doc-file" required>
+        </div>
+        <div class="field">
+          <label>Tipo de documento</label>
+          <select id="doc-type">${DOC_TYPES.map(d => `<option value="${d.value}">${d.label}</option>`).join("")}</select>
+        </div>
+        <div class="field">
+          <label>Descrição</label>
+          <input type="text" id="doc-desc" placeholder="Opcional">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height:38px;">Enviar</button>
+        <label class="doc-public-toggle" style="grid-column: 1 / -1;">
+          <input type="checkbox" id="doc-public"> Visível publicamente na página da oferta
+        </label>
+      </form>
+    `;
+    document.getElementById("doc-upload-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = document.getElementById("doc-file").files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("documentType", document.getElementById("doc-type").value);
+      fd.append("description", document.getElementById("doc-desc").value);
+      fd.append("publicDocument", document.getElementById("doc-public").checked);
+      const res = await apiFetch(`/api/backoffice/vagas/${vagaId}/documents`, { method: "POST", body: fd });
+      if (res.ok) {
+        showMsg("Documento enviado.", true);
+        loadDocs();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        showMsg(d.message || "Não foi possível enviar o documento.", false);
+      }
+    });
+  }
+
+  function loadDocs() {
+    apiFetch(`/api/backoffice/vagas/${vagaId}/documents`).then(r => r.json()).then(docs => {
+      document.getElementById("docs-meta").textContent = docs.length + " documento(s)";
+      if (docs.length === 0) {
+        document.getElementById("docs-list").innerHTML = '<div class="empty-state">Ainda não existem documentos anexados.</div>';
+        return;
+      }
+      document.getElementById("docs-list").innerHTML = docs.map(d => `
+        <div class="doc-row">
+          <div>
+            <span class="title" style="font-family:var(--serif); font-size:0.98rem;">${d.filename}</span>
+            <span class="doc-desc">${docTypeLabel(d.documentType)}${d.description ? " — " + d.description : ""}</span>
+          </div>
+          <span class="tag ${d.publicDocument ? 'state-published' : ''}">${d.publicDocument ? "Público" : "Interno"}</span>
+          <a href="#" class="doc-download" data-id="${d.id}" data-name="${d.filename}">Descarregar</a>
+          ${canManageVaga ? `<a href="#" class="doc-delete" data-id="${d.id}" style="color:var(--danger);">Apagar</a>` : "<span></span>"}
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".doc-download").forEach(a => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        downloadAuthenticated(`/api/backoffice/documents/${a.dataset.id}/download`, a.dataset.name);
+      }));
+      document.querySelectorAll(".doc-delete").forEach(a => a.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!confirm("Apagar este documento?")) return;
+        apiFetch(`/api/backoffice/documents/${a.dataset.id}`, { method: "DELETE" }).then(res => {
+          if (res.ok) loadDocs(); else showMsg("Não foi possível apagar o documento.", false);
+        });
+      }));
+    }).catch(() => {
+      document.getElementById("docs-list").innerHTML = '<div class="empty-state">Não foi possível carregar os documentos.</div>';
+    });
+  }
+
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
     canManageVaga = hasRole(user, "ADMIN", "CDRH", "GESTOR_RH");
+    canDelete = hasRole(user, "ADMIN", "CDRH");
     loadVaga();
     loadCandidates();
+    renderUploadForm();
+    loadDocs();
   });
 </script>
 </body>

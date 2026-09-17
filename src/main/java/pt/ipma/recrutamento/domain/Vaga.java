@@ -138,9 +138,12 @@ public class Vaga {
     @JoinColumn(name = "juri_vs2_id")
     private Trabalhador juriVogalSuplente2;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_location_id")
-    private WorkLocation workLocation;
+    /** Um ou mais locais de trabalho (secção 18 — Many2many). */
+    @ManyToMany
+    @JoinTable(name = "vaga_work_location",
+            joinColumns = @JoinColumn(name = "vaga_id"),
+            inverseJoinColumns = @JoinColumn(name = "work_location_id"))
+    private Set<WorkLocation> workLocations = new HashSet<>();
 
     @ManyToMany
     @JoinTable(name = "vaga_department",

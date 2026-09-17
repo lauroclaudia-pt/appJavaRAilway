@@ -20,6 +20,7 @@ public class BackOfficeVagaController {
 
     private final VagaService vagaService;
     private final WorkflowEngineService workflowEngineService;
+    private final pt.ipma.recrutamento.repository.TrabalhadorRepository trabalhadorRepository;
 
     /**
      * Criação de vaga. Aceita multipart/form-data para permitir anexar documentos
@@ -50,6 +51,22 @@ public class BackOfficeVagaController {
     @GetMapping
     public java.util.List<Vaga> listAll() {
         return vagaService.listAll();
+    }
+
+    /** Vagas onde o trabalhador autenticado atua como gestor ou como júri. */
+    @GetMapping("/minhas")
+    public java.util.List<Vaga> listMinhas(org.springframework.security.core.Authentication auth) {
+        Long id = trabalhadorRepository.findByEmailIgnoreCase(auth.getName())
+                .orElseThrow(() -> new IllegalStateException("Trabalhador autenticado não encontrado."))
+                .getId();
+        return vagaService.listMinhas(id);
+    }
+
+    /** Apagar um procedimento — restrito a CDRH/ADMIN (ver SecurityConfig). */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        vagaService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/publish")

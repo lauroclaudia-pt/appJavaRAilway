@@ -26,7 +26,7 @@ public class AuthController {
                 "id", t.getId(),
                 "name", t.getName(),
                 "email", t.getEmail(),
-                "roles", t.getResponsabilidades().stream().map(Enum::name).sorted().toList()
+                "roles", t.activeRoles().stream().map(Enum::name).sorted().toList()
         );
     }
 }

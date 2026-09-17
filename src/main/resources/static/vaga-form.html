@@ -75,7 +75,7 @@
       </div>
       <div class="field">
         <label for="jobPosition">Cargo / Carreira - Categoria</label>
-        <input type="text" id="jobPosition" required placeholder="ex.: Técnico Superior">
+        <select id="jobPosition" required><option value="">— Selecionar —</option></select>
       </div>
     </div>
 
@@ -105,8 +105,8 @@
     </div>
 
     <div class="field">
-      <label for="workLocationId">Local de trabalho</label>
-      <select id="workLocationId"><option value="">— Selecionar —</option></select>
+      <label for="workLocationIds">Local(is) de trabalho</label>
+      <div class="checkbox-group" id="workLocationIds"></div>
     </div>
 
     <div class="form-section">
@@ -150,7 +150,12 @@
       </div>
 
       <div class="field">
-        <label for="vacancyRelation">Relação de vagas/candidaturas</label>
+        <label for="salaryInfo">Detalhes da Bolsa ou Remuneração</label>
+        <textarea id="salaryInfo" style="min-height:140px;"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="vacancyRelation">Relação Jurídica Exigida</label>
         <select id="vacancyRelation"><option value="">— Selecionar —</option></select>
       </div>
     </div>
@@ -173,8 +178,8 @@
       </div>
 
       <div class="field">
-        <label for="requirements">Outros requisitos de admissão</label>
-        <textarea id="requirements" placeholder="Descreva requisitos adicionais, se aplicável"></textarea>
+        <label for="requirements">Requisitos de Constituição de RJ ou Contratação</label>
+        <textarea id="requirements" style="min-height:160px;"></textarea>
       </div>
     </div>
 
@@ -238,8 +243,8 @@
     <div class="form-section">
       <h3>Descrição para o website</h3>
       <div class="field">
-        <label for="websiteDescription">Caracterização do posto de trabalho</label>
-        <textarea id="websiteDescription" placeholder="Texto apresentado na página pública da oferta"></textarea>
+        <label for="websiteDescription">Caracterização do posto de trabalho *</label>
+        <textarea id="websiteDescription" required placeholder="Texto apresentado na página pública da oferta"></textarea>
       </div>
     </div>
 
@@ -279,16 +284,34 @@
       .catch(() => {});
   }
 
+  loadOptionCategory("CARGO_CARREIRA", "jobPosition");
   loadOptionCategory("VINCULO", "vinculo");
   loadOptionCategory("REGIME", "regime");
   loadOptionCategory("NIVEL_HABILITACIONAL", "nivelHabilitacional");
   loadOptionCategory("RELACAO_VAGAS_CANDIDATURAS", "vacancyRelation");
 
   apiFetch("/api/backoffice/work-locations").then(r => r.json()).then(locs => {
-    fillSelect(document.getElementById("workLocationId"), locs.map(l => ({
-      id: l.id, label: `${l.displayName} (${l.municipality})`
-    })), "id", "label");
+    const container = document.getElementById("workLocationIds");
+    container.innerHTML = locs.map(l => `
+      <div class="checkbox-field">
+        <input type="checkbox" name="loc" value="${l.id}" id="loc-${l.id}">
+        <label for="loc-${l.id}">${l.displayName} (${l.municipality})</label>
+      </div>
+    `).join("");
   });
+
+  // Textos-modelo (editáveis) — secção 14/17 do levantamento de requisitos.
+  document.getElementById("salaryInfo").value =
+    "Havendo lugar à negociação do posicionamento remuneratório, aquela que o dirigente máximo do órgão ou serviço pondera vir a oferecer aos trabalhadores a recrutar, determinada em função das disponibilidades orçamentais, sem prejuízo da possibilidade de, fundamentadamente, poder vir a oferecer posição diferente nos termos e com observância dos limites legalmente definidos.\n\n" +
+    "O montante da bolsa consta da tabela de valores das bolsas, aprovada pela FCT, I.P. O bolseiro tem ainda direito ao reembolso dos encargos relativos ao Seguro Social Voluntário (1.º escalão), caso se aplique, de acordo com as condições definidas no Estatuto do Bolseiro de Investigação. O bolseiro beneficiará de um seguro de acidentes pessoais no decurso da bolsa.\n\n" +
+    "O pagamento da bolsa será feito com periodicidade mensal, através de transferência bancária a efetuar pelos serviços do IPMA, I.P. para a conta indicada pelo bolseiro.";
+
+  document.getElementById("requirements").value =
+    "a) Nacionalidade Portuguesa, quando não dispensada pela Constituição, convenção internacional ou lei especial;\n" +
+    "b) 18 anos de idade completos;\n" +
+    "c) Não inibição do exercício de funções públicas ou não interdição para o exercício daquelas que se propõe desempenhar;\n" +
+    "d) Robustez física e perfil psíquico indispensável ao exercício das funções;\n" +
+    "e) Cumprimento das leis de vacinação obrigatória.";
 
   apiFetch("/api/backoffice/departments").then(r => r.json()).then(depts => {
     const container = document.getElementById("departmentIds");
@@ -363,6 +386,7 @@
     put("regime", "regime");
     put("salary", "salary");
     put("salaryPlus", "salaryPlus");
+    put("salaryInfo", "salaryInfo");
     put("vacancyRelation", "vacancyRelation");
     putChecked("allowNoDegree", "allowNoDegree");
     putChecked("vagasDeficiencia", "vagasDeficiencia");
@@ -380,7 +404,8 @@
     put("juriVe2Id", "juriVe2Id");
     put("juriVs1Id", "juriVs1Id");
     put("juriVs2Id", "juriVs2Id");
-    put("workLocationId", "workLocationId");
+    const workLocationIds = Array.from(document.querySelectorAll('input[name="loc"]:checked')).map(cb => cb.value);
+    workLocationIds.forEach(id => formData.append("workLocationIds", id));
     departmentIds.forEach(id => formData.append("departmentIds", id));
 
     const editalFile = document.getElementById("edital").files[0];

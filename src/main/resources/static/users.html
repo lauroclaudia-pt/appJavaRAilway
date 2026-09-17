@@ -17,10 +17,16 @@
   .form-success { background: #eaf6f0; border: 1px solid var(--teal); color: var(--teal-dark); padding: 12px 14px; border-radius: 3px; font-size: 0.88rem; margin-bottom: 20px; display: none; }
   .form-success.visible { display: block; }
   .checkbox-group { border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; }
+  .role-row { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .role-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
   .checkbox-field { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .checkbox-field:last-child { margin-bottom: 0; }
   .checkbox-field input { width: 16px; height: 16px; }
-  .checkbox-field label { font-size: 0.92rem; color: var(--ink-soft); margin: 0; }
+  .checkbox-field label { font-size: 0.92rem; color: var(--ink-soft); margin: 0; font-weight: 500; }
+  .role-dates { display: none; grid-template-columns: 1fr 1fr; gap: 10px; padding-left: 26px; }
+  .role-dates.visible { display: grid; }
+  .role-dates .field { margin-bottom: 0; }
+  .role-dates label { font-size: 0.75rem; }
+  .role-dates input { padding: 8px 10px; font-size: 0.88rem; }
   .login-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 0.9rem; color: var(--ink-soft); }
   .login-fields { display: none; }
   .login-fields.visible { display: block; }
@@ -76,24 +82,18 @@
 
       <div class="field">
         <label>Responsabilidades</label>
-        <div class="checkbox-group">
-          <div class="checkbox-field"><input type="checkbox" id="role-gestor" value="GESTOR_RH"><label for="role-gestor">Gestor de RH</label></div>
-          <div class="checkbox-field"><input type="checkbox" id="role-juri" value="JURI"><label for="role-juri">Membro do Júri</label></div>
-          <div class="checkbox-field"><input type="checkbox" id="role-cdrh" value="CDRH"><label for="role-cdrh">CDRH (Chefe de Divisão de RH)</label></div>
-          <div class="checkbox-field"><input type="checkbox" id="role-admin" value="ADMIN"><label for="role-admin">Administrador</label></div>
-        </div>
+        <p class="form-note" style="margin:0 0 8px;">Cada responsabilidade tem a sua própria data de início/fim.</p>
+        <div class="checkbox-group" id="role-rows"></div>
       </div>
 
-      <div class="field-row">
-        <div class="field">
-          <label for="startDate">Data de início</label>
-          <input type="datetime-local" id="startDate" required>
-        </div>
-        <div class="field">
-          <label for="endDate">Data de fim</label>
-          <input type="datetime-local" id="endDate">
-          <div class="form-note">Em branco = sem data de fim.</div>
-        </div>
+      <div class="field">
+        <label for="startDate">Data de início (registo)</label>
+        <input type="datetime-local" id="startDate" required>
+      </div>
+      <div class="field">
+        <label for="endDate">Data de fim (registo)</label>
+        <input type="datetime-local" id="endDate">
+        <div class="form-note">Em branco = sem data de fim.</div>
       </div>
 
       <label class="login-toggle">
@@ -138,6 +138,41 @@
     if (!hasRole(user, "ADMIN")) window.location.href = "/dashboard.html";
   });
 
+  const ROLE_DEFS = [
+    { value: "GESTOR_RH", label: "Gestor de RH" },
+    { value: "JURI", label: "Membro do Júri" },
+    { value: "CDRH", label: "CDRH (Chefe de Divisão de RH)" },
+    { value: "ADMIN", label: "Administrador" },
+  ];
+
+  const roleRowsEl = document.getElementById("role-rows");
+
+  function buildRoleRows() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    roleRowsEl.innerHTML = ROLE_DEFS.map(rd => `
+      <div class="role-row">
+        <div class="checkbox-field">
+          <input type="checkbox" class="role-check" data-role="${rd.value}" id="role-${rd.value}">
+          <label for="role-${rd.value}">${rd.label}</label>
+        </div>
+        <div class="role-dates" id="dates-${rd.value}">
+          <div class="field">
+            <label>Início</label>
+            <input type="date" class="role-start" data-role="${rd.value}" value="${todayStr}">
+          </div>
+          <div class="field">
+            <label>Fim</label>
+            <input type="date" class="role-end" data-role="${rd.value}">
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    document.querySelectorAll(".role-check").forEach(cb => cb.addEventListener("change", () => {
+      document.getElementById("dates-" + cb.dataset.role).classList.toggle("visible", cb.checked);
+    }));
+  }
+
   const toggleLogin = document.getElementById("toggle-login");
   const loginFields = document.getElementById("login-fields");
   toggleLogin.addEventListener("change", () => {
@@ -156,6 +191,7 @@
     document.getElementById("form-title").textContent = "Novo trabalhador";
     document.getElementById("user-form").reset();
     document.getElementById("user-id").value = "";
+    buildRoleRows();
     document.getElementById("startDate").value = toLocalInputValue(new Date().toISOString());
     document.getElementById("endDate").value = "";
     toggleLogin.checked = false;
@@ -172,9 +208,17 @@
     document.getElementById("form-title").textContent = "Editar trabalhador";
     document.getElementById("user-id").value = u.id;
     document.getElementById("name").value = u.name;
-    document.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(cb => {
-      cb.checked = (u.responsabilidades || []).includes(cb.value);
+
+    buildRoleRows();
+    (u.responsabilidades || []).forEach(r => {
+      const cb = document.querySelector(`.role-check[data-role="${r.role}"]`);
+      if (!cb) return;
+      cb.checked = true;
+      document.getElementById("dates-" + r.role).classList.add("visible");
+      document.querySelector(`.role-start[data-role="${r.role}"]`).value = r.startDate || "";
+      document.querySelector(`.role-end[data-role="${r.role}"]`).value = r.endDate || "";
     });
+
     document.getElementById("startDate").value = toLocalInputValue(u.startDate);
     document.getElementById("endDate").value = toLocalInputValue(u.endDate);
 
@@ -210,7 +254,7 @@
               <span class="title">${u.name}</span>
               <span class="subtitle">${u.email || "Sem acesso de login"}</span>
               <div class="badge-list">
-                ${(u.responsabilidades || []).map(r => `<span class="badge">${roleLabel(r)}</span>`).join("") || '<span class="badge">Sem responsabilidade atribuída</span>'}
+                ${(u.responsabilidades || []).map(r => `<span class="badge">${roleLabel(r.role)}${r.active ? "" : " · inativa"}</span>`).join("") || '<span class="badge">Sem responsabilidade atribuída</span>'}
               </div>
               <div class="row-actions">
                 <a href="#" class="edit-link" data-id="${u.id}">Editar</a>
@@ -255,8 +299,15 @@
     errorBox.classList.remove("visible");
     successBox.classList.remove("visible");
 
-    const roles = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
-    if (roles.length === 0) {
+    const responsabilidades = Array.from(document.querySelectorAll(".role-check:checked")).map(cb => {
+      const role = cb.dataset.role;
+      return {
+        role,
+        startDate: document.querySelector(`.role-start[data-role="${role}"]`).value || null,
+        endDate: document.querySelector(`.role-end[data-role="${role}"]`).value || null,
+      };
+    });
+    if (responsabilidades.length === 0) {
       errorBox.textContent = "Selecione pelo menos uma responsabilidade.";
       errorBox.classList.add("visible");
       return;
@@ -270,7 +321,7 @@
       name: document.getElementById("name").value.trim(),
       email: toggleLogin.checked ? document.getElementById("email").value.trim() : null,
       password: toggleLogin.checked ? document.getElementById("password").value : null,
-      roles,
+      responsabilidades,
       startDate: document.getElementById("startDate").value || null,
       endDate: document.getElementById("endDate").value || null,
     };

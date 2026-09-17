@@ -12,13 +12,12 @@ import java.util.Set;
 
 /**
  * Trabalhador — uma pessoa (funcionário do IPMA ou elemento externo, ex.: membro
- * de júri convidado). O login (email/password) é OPCIONAL: um trabalhador pode
- * ser indicado como júri sem nunca aceder à plataforma. A cada trabalhador pode
- * ser associada uma ou mais responsabilidades (ADMIN, CDRH, GESTOR_RH, JURI);
- * quando existe login, o acesso reflete a UNIÃO de permissões de todas elas.
+ * de júri convidado). O login (email/password) é OPCIONAL. A cada trabalhador
+ * podem ser associadas uma ou mais {@link Responsabilidade}, CADA UMA com a sua
+ * própria janela de validade (ex.: Gestor de RH de Jan-Jun, Júri de Mar-Dez).
  *
- * O estado (Ativo/Inativo) é CALCULADO a partir da janela de validade
- * (startDate/endDate), tal como nas Opções de Candidatura — ver {@link #isActive()}.
+ * O estado geral do trabalhador (Ativo/Inativo) é calculado a partir da sua
+ * própria janela (startDate/endDate) — ver {@link #isActive()}.
  */
 @Entity
 @Table(name = "trabalhador")
@@ -43,9 +42,7 @@ public class Trabalhador {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "trabalhador_responsabilidade", joinColumns = @JoinColumn(name = "trabalhador_id"))
-    @Column(name = "responsabilidade", nullable = false, length = 40)
-    @Enumerated(EnumType.STRING)
-    private Set<Role> responsabilidades = new HashSet<>();
+    private Set<Responsabilidade> responsabilidades = new HashSet<>();
 
     @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate = LocalDateTime.now();
@@ -56,8 +53,18 @@ public class Trabalhador {
     @Column(name = "create_date", nullable = false)
     private LocalDateTime createDate = LocalDateTime.now();
 
+    /** Tem esta responsabilidade ATUALMENTE ativa (dentro da janela própria dela). */
     public boolean hasResponsabilidade(Role role) {
-        return responsabilidades.contains(role);
+        return responsabilidades.stream().anyMatch(r -> r.getRole() == role && r.isActive());
+    }
+
+    /** Todas as responsabilidades atualmente ativas (para autorizações e exibição). */
+    public Set<Role> activeRoles() {
+        Set<Role> roles = new HashSet<>();
+        for (Responsabilidade r : responsabilidades) {
+            if (r.isActive()) roles.add(r.getRole());
+        }
+        return roles;
     }
 
     public boolean hasLogin() {

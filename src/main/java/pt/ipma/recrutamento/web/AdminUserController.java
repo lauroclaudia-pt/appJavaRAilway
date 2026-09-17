@@ -7,19 +7,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import pt.ipma.recrutamento.domain.Responsabilidade;
 import pt.ipma.recrutamento.domain.Trabalhador;
 import pt.ipma.recrutamento.domain.enums.Role;
 import pt.ipma.recrutamento.repository.TrabalhadorRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Administração de trabalhadores: um trabalhador pode ter zero, uma ou várias
- * responsabilidades (ADMIN, CDRH, GESTOR_RH, JURI); o login (email/password) é
- * opcional; o estado (Ativo/Inativo) é calculado a partir de startDate/endDate.
- * Acesso restrito a ADMIN.
+ * Administração de trabalhadores. Cada responsabilidade (ADMIN, CDRH, GESTOR_RH,
+ * JURI) tem a SUA PRÓPRIA janela de validade (startDate/endDate, tipo DATE) — a
+ * mesma pessoa pode ser Gestor de RH num período e Júri noutro, em simultâneo ou
+ * não. O login (email/password) é opcional. Acesso restrito a ADMIN.
  */
 @RestController
 @RequestMapping("/api/admin/users")
@@ -35,7 +38,7 @@ public class AdminUserController {
     }
 
     @PostMapping
-    public Trabalhador create(@org.springframework.web.bind.annotation.RequestBody UserRequest req) {
+    public Trabalhador create(@RequestBody UserRequest req) {
         boolean wantsLogin = req.getEmail() != null && !req.getEmail().isBlank();
 
         if (wantsLogin && trabalhadorRepository.findByEmailIgnoreCase(req.getEmail()).isPresent()) {
@@ -44,7 +47,6 @@ public class AdminUserController {
         if (wantsLogin && (req.getPassword() == null || req.getPassword().isBlank())) {
             throw new IllegalArgumentException("É necessário definir uma palavra-passe quando é indicado um email de acesso.");
         }
-        validateDates(req);
 
         Trabalhador trabalhador = new Trabalhador();
         trabalhador.setName(req.getName());
@@ -52,14 +54,14 @@ public class AdminUserController {
             trabalhador.setEmail(req.getEmail());
             trabalhador.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         }
-        trabalhador.setResponsabilidades(req.getRoles());
+        trabalhador.setResponsabilidades(toResponsabilidades(req.getResponsabilidades()));
         trabalhador.setStartDate(req.getStartDate() != null ? req.getStartDate() : LocalDateTime.now());
         trabalhador.setEndDate(req.getEndDate());
         return trabalhadorRepository.save(trabalhador);
     }
 
     @PutMapping("/{id}")
-    public Trabalhador update(@PathVariable Long id, @org.springframework.web.bind.annotation.RequestBody UserRequest req) {
+    public Trabalhador update(@PathVariable Long id, @RequestBody UserRequest req) {
         Trabalhador trabalhador = trabalhadorRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Trabalhador não encontrado: " + id));
 
@@ -69,12 +71,10 @@ public class AdminUserController {
                     .filter(existing -> !existing.getId().equals(id))
                     .ifPresent(existing -> { throw new IllegalStateException("Já existe um trabalhador com este email."); });
         }
-        validateDates(req);
 
         trabalhador.setName(req.getName());
         if (wantsLogin) {
             trabalhador.setEmail(req.getEmail());
-            // A palavra-passe só é alterada se for indicada; em branco mantém a atual.
             if (req.getPassword() != null && !req.getPassword().isBlank()) {
                 trabalhador.setPasswordHash(passwordEncoder.encode(req.getPassword()));
             }
@@ -82,7 +82,7 @@ public class AdminUserController {
             trabalhador.setEmail(null);
             trabalhador.setPasswordHash(null);
         }
-        trabalhador.setResponsabilidades(req.getRoles());
+        trabalhador.setResponsabilidades(toResponsabilidades(req.getResponsabilidades()));
         if (req.getStartDate() != null) trabalhador.setStartDate(req.getStartDate());
         trabalhador.setEndDate(req.getEndDate());
         return trabalhadorRepository.save(trabalhador);
@@ -97,10 +97,29 @@ public class AdminUserController {
         return ResponseEntity.noContent().build();
     }
 
-    private void validateDates(UserRequest req) {
-        if (req.getStartDate() != null && req.getEndDate() != null && !req.getEndDate().isAfter(req.getStartDate())) {
-            throw new IllegalArgumentException("A data de fim tem de ser posterior à data de início.");
+    private Set<Responsabilidade> toResponsabilidades(List<ResponsabilidadeRequest> reqs) {
+        if (reqs == null || reqs.isEmpty()) {
+            throw new IllegalArgumentException("Selecione pelo menos uma responsabilidade.");
         }
+        Set<Responsabilidade> result = new HashSet<>();
+        for (ResponsabilidadeRequest r : reqs) {
+            if (r.getRole() == null) continue;
+            if (r.getEndDate() != null && r.getStartDate() != null && r.getEndDate().isBefore(r.getStartDate())) {
+                throw new IllegalArgumentException("A data de fim da responsabilidade " + r.getRole() + " não pode ser anterior à data de início.");
+            }
+            result.add(new Responsabilidade(r.getRole(), r.getStartDate(), r.getEndDate()));
+        }
+        if (result.isEmpty()) {
+            throw new IllegalArgumentException("Selecione pelo menos uma responsabilidade.");
+        }
+        return result;
+    }
+
+    @Data
+    public static class ResponsabilidadeRequest {
+        private Role role;
+        private LocalDate startDate;
+        private LocalDate endDate;
     }
 
     @Data
@@ -110,7 +129,7 @@ public class AdminUserController {
         private String email;
         private String password;
         @NotEmpty(message = "Selecione pelo menos uma responsabilidade.")
-        private Set<Role> roles;
+        private List<ResponsabilidadeRequest> responsabilidades;
         private LocalDateTime startDate;
         private LocalDateTime endDate;
     }

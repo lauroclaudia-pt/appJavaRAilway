@@ -39,7 +39,7 @@ public class BackOfficeReferenceController {
                 .map(t -> Map.<String, Object>of(
                         "id", t.getId(),
                         "name", t.getName(),
-                        "responsabilidades", t.getResponsabilidades().stream().map(Enum::name).sorted().toList(),
+                        "responsabilidades", t.activeRoles().stream().map(Enum::name).sorted().toList(),
                         "hasLogin", t.hasLogin()))
                 .toList();
     }

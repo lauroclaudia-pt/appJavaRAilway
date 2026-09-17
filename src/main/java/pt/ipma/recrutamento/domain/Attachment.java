@@ -1,5 +1,6 @@
 package pt.ipma.recrutamento.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,6 +31,7 @@ public class Attachment {
 
     @JdbcTypeCode(SqlTypes.VARBINARY)
     @Column(nullable = false)
+    @JsonIgnore
     private byte[] data;
 
     /** Modelo a que o anexo pertence: "vaga", "applicant", "appeal". */
@@ -42,6 +44,10 @@ public class Attachment {
     /** Ex.: ata_provisoria, ata_final, aviso_dre, cv, habilitacoes, declaracao_incapacidade, outro. */
     @Column(name = "document_type", length = 60)
     private String documentType;
+
+    /** Descrição livre associada ao documento (secção 19). */
+    @Column(columnDefinition = "text")
+    private String description;
 
     @Column(name = "is_public_document", nullable = false)
     private boolean publicDocument = false;

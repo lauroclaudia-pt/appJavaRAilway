@@ -12,4 +12,4 @@ WORKDIR /app
 COPY --from=build /app/target/recrutamento-1.0.0.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Duser.timezone=Europe/Lisbon", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

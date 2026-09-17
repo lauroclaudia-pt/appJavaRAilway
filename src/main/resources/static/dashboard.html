@@ -29,9 +29,21 @@
 
 <div class="dash-grid" id="dash-grid"></div>
 
+<div class="hero-stats" id="stats-strip" style="display:none; padding:0 40px 32px; border-bottom:1px solid var(--line);"></div>
+
+<section class="section" id="minhas-section" style="border-top:1px solid var(--line); border-bottom:none; display:none;">
+  <div class="section-head">
+    <h2>Os meus procedimentos</h2>
+    <span class="meta" id="minhas-meta"></span>
+  </div>
+  <div class="bulletin" id="minhas-list">
+    <div class="empty-state">A carregar…</div>
+  </div>
+</section>
+
 <section class="section" style="border-top:1px solid var(--line); border-bottom:none;">
   <div class="section-head">
-    <h2>Vagas no sistema</h2>
+    <h2>Todas as vagas</h2>
     <span class="meta" id="vagas-meta"></span>
   </div>
   <div class="bulletin" id="vagas-list">
@@ -100,6 +112,7 @@
 
       if (hasRole(user, "ADMIN", "CDRH", "GESTOR_RH", "JURI")) {
         loadVagas();
+        loadMinhas();
       } else {
         document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Sem vagas internas para o seu perfil.</div>';
       }
@@ -108,28 +121,64 @@
       document.getElementById("welcome-sub").textContent = "Não foi possível confirmar a sessão.";
     });
 
+  const stateLabels = { DRAFT: "Rascunho", PUBLISHED: "Publicada", RUNNING: "Em curso", FINISHED: "Concluída", CANCELLED: "Cancelada", DESERT: "Deserta" };
+
+  function renderVagaRow(v) {
+    return `
+      <a class="bulletin-row" id="job-${v.id}" href="/vaga-detail.html?id=${v.id}" style="text-decoration:none; color:inherit;">
+        <div>
+          <span class="title">${v.name}</span>
+          <span class="subtitle">${v.jobPosition || ""} · Código ${v.vagaCode || "—"}</span>
+        </div>
+        <span class="tag state-${(v.state || "").toLowerCase()}">${stateLabels[v.state] || v.state}</span>
+        <span class="deadline">Etapa: ${v.currentStageCode || "—"}</span>
+      </a>
+    `;
+  }
+
+  function renderStats(vagas) {
+    const abertas = vagas.filter(v => v.state === "DRAFT" || v.state === "PUBLISHED").length;
+    const emCurso = vagas.filter(v => v.state === "RUNNING").length;
+    const concluidas = vagas.filter(v => v.state === "FINISHED").length;
+    const strip = document.getElementById("stats-strip");
+    strip.style.display = "flex";
+    strip.innerHTML = `
+      <div><span class="stat-value">${abertas}</span><span class="stat-label">abertas</span></div>
+      <div><span class="stat-value">${emCurso}</span><span class="stat-label">em curso</span></div>
+      <div><span class="stat-value">${concluidas}</span><span class="stat-label">concluídas</span></div>
+      <div><span class="stat-value">${vagas.length}</span><span class="stat-label">total</span></div>
+    `;
+  }
+
   function loadVagas() {
     apiFetch("/api/backoffice/vagas")
       .then(r => r.json())
       .then(vagas => {
+        renderStats(vagas);
         document.getElementById("vagas-meta").textContent = vagas.length + " vaga(s)";
         if (vagas.length === 0) {
           document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Ainda não existem vagas criadas.</div>';
           return;
         }
-        document.getElementById("vagas-list").innerHTML = vagas.map(v => `
-          <a class="bulletin-row" id="job-${v.id}" href="/vaga-detail.html?id=${v.id}" style="text-decoration:none; color:inherit;">
-            <div>
-              <span class="title">${v.name}</span>
-              <span class="subtitle">${v.jobPosition || ""} · Código ${v.vagaCode || "—"}</span>
-            </div>
-            <span class="tag state-${(v.state || "").toLowerCase()}">${v.state}</span>
-            <span class="deadline">Etapa: ${v.currentStageCode || "—"}</span>
-          </a>
-        `).join("");
+        document.getElementById("vagas-list").innerHTML = vagas.map(renderVagaRow).join("");
       })
       .catch(() => {
         document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Não foi possível carregar as vagas.</div>';
+      });
+  }
+
+  function loadMinhas() {
+    apiFetch("/api/backoffice/vagas/minhas")
+      .then(r => r.json())
+      .then(vagas => {
+        document.getElementById("minhas-section").style.display = "block";
+        document.getElementById("minhas-meta").textContent = vagas.length + " procedimento(s)";
+        document.getElementById("minhas-list").innerHTML = vagas.length === 0
+          ? '<div class="empty-state">Não está indicado como gestor ou júri em nenhum procedimento.</div>'
+          : vagas.map(renderVagaRow).join("");
+      })
+      .catch(() => {
+        document.getElementById("minhas-list").innerHTML = '<div class="empty-state">Não foi possível carregar os seus procedimentos.</div>';
       });
   }
 </script>

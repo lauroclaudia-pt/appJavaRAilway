@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .map(t -> (UserDetails) org.springframework.security.core.userdetails.User
                         .withUsername(t.getEmail())
                         .password(t.getPasswordHash())
-                        .authorities(t.getResponsabilidades().stream()
+                        .authorities(t.activeRoles().stream()
                                 .map(r -> "ROLE_" + r.name())
                                 .toArray(String[]::new))
                         .build())
@@ -68,6 +68,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").authenticated()
                 .requestMatchers("/api/portal/**").hasAnyRole("PORTAL", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/backoffice/vagas/**").hasAnyRole("GESTOR_RH", "CDRH", "JURI", "ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/backoffice/vagas/**").hasAnyRole("CDRH", "ADMIN")
                 .requestMatchers("/api/backoffice/vagas/**").hasAnyRole("GESTOR_RH", "CDRH", "ADMIN")
                 .requestMatchers("/api/backoffice/**").hasAnyRole("GESTOR_RH", "JURI", "CDRH", "ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

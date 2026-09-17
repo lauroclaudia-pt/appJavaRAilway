@@ -47,6 +47,7 @@ public class VagaService {
         vaga.setRegime(req.getRegime());
         if (req.getSalary() != null) vaga.setSalary(req.getSalary());
         if (req.getSalaryPlus() != null) vaga.setSalaryPlus(req.getSalaryPlus());
+        vaga.setSalaryInfo(req.getSalaryInfo());
         vaga.setVacancyRelation(req.getVacancyRelation());
         vaga.setAllowNoDegree(req.isAllowNoDegree());
         vaga.setVagasDeficiencia(req.isVagasDeficiencia());
@@ -75,9 +76,9 @@ public class VagaService {
 
         validateJuriDistinto(vaga);
 
-        if (req.getWorkLocationId() != null) {
-            WorkLocation loc = workLocationRepository.findById(req.getWorkLocationId()).orElse(null);
-            vaga.setWorkLocation(loc);
+        if (req.getWorkLocationIds() != null && !req.getWorkLocationIds().isEmpty()) {
+            Set<WorkLocation> locs = new HashSet<>(workLocationRepository.findAllById(req.getWorkLocationIds()));
+            vaga.setWorkLocations(locs);
         }
         if (req.getDepartmentIds() != null && !req.getDepartmentIds().isEmpty()) {
             Set<Department> departments = new HashSet<>(departmentRepository.findAllById(req.getDepartmentIds()));
@@ -161,6 +162,18 @@ public class VagaService {
 
     public List<Vaga> listAll() {
         return vagaRepository.findAll();
+    }
+
+    public List<Vaga> listMinhas(Long trabalhadorId) {
+        return vagaRepository.findMinhas(trabalhadorId);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        if (!vagaRepository.existsById(id)) {
+            throw new IllegalArgumentException("Vaga não encontrada: " + id);
+        }
+        vagaRepository.deleteById(id);
     }
 
     public Vaga getOrThrow(Long id) {
