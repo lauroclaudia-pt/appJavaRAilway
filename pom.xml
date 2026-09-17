@@ -14,7 +14,7 @@
     <groupId>pt.ipma</groupId>
     <artifactId>recrutamento</artifactId>
     <version>1.0.0</version>
-    <name>IPMA - Sistema de Recrutamento</name>
+    <name>Plataforma de Recrutamento do IPMA</name>
     <description>Plataforma de recrutamento (Website + Portal do Candidato + BackOffice RH) para o IPMA, I.P.</description>
 
     <properties>

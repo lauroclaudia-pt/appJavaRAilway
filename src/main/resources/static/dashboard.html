@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel Interno — IPMA Recrutamento</title>
+<title>Painel Interno — Plataforma de Recrutamento do IPMA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
   <nav class="nav">
     <a href="/index.html">Início</a>
     <a href="/jobs.html">Ofertas</a>
@@ -49,7 +50,7 @@
 
   const CARDS_BY_ROLE = {
     ADMIN: [
-      { title: "Gerir utilizadores", desc: "Criar contas para Gestores de RH, Júri e CDRH.", href: "#", note: "Via API: POST /api/admin/users" },
+      { title: "Gerir utilizadores", desc: "Criar contas para Gestores de RH, Júri e CDRH.", href: "/users.html" },
       { title: "Todas as vagas", desc: "Consultar o estado de todos os procedimentos em curso.", href: "#vagas" },
       { title: "Ofertas públicas", desc: "Ver o que está publicado no website.", href: "/jobs.html" },
     ],
@@ -72,10 +73,6 @@
       { title: "Ofertas abertas", desc: "Consultar novas oportunidades no IPMA.", href: "/jobs.html" },
     ],
   };
-
-  function roleLabel(role) {
-    return { ADMIN: "Administrador", CDRH: "Chefe de Divisão de RH", GESTOR_RH: "Gestor de RH", JURI: "Membro do Júri", PORTAL: "Candidato" }[role] || role;
-  }
 
   apiFetch("/api/auth/me")
     .then(r => r.json())

@@ -54,3 +54,13 @@ function formatDate(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+function roleLabel(role) {
+  return {
+    ADMIN: "Administrador",
+    CDRH: "Chefe de Divisão de RH",
+    GESTOR_RH: "Gestor de RH",
+    JURI: "Membro do Júri",
+    PORTAL: "Candidato",
+  }[role] || role;
+}

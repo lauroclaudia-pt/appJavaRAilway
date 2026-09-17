@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Entrar — IPMA Recrutamento</title>
+<title>Entrar — Plataforma de Recrutamento do IPMA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
   <nav class="nav">
     <a href="/index.html">Início</a>
     <a href="/jobs.html">Ofertas</a>
@@ -27,9 +28,15 @@
       <small>Divisão de Recursos Humanos — IPMA, I.P.</small>
     </div>
     <svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M -20 130 C 90 70, 180 190, 290 120 S 460 60, 560 110" fill="none" stroke="#2f8f8b" stroke-width="1.2"/>
-      <path d="M -20 260 C 100 210, 190 310, 300 250 S 470 190, 560 240" fill="none" stroke="#c7d6e2" stroke-width="1.2"/>
-      <path d="M -20 400 C 100 450, 200 370, 300 420 S 460 470, 560 410" fill="none" stroke="#7b97b0" stroke-width="1.2"/>
+      <defs>
+        <linearGradient id="login-arc-outer" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#54c8ee"/>
+          <stop offset="100%" stop-color="#1c4f8f"/>
+        </linearGradient>
+      </defs>
+      <circle cx="-60" cy="560" r="420" fill="none" stroke="url(#login-arc-outer)" stroke-width="10"/>
+      <circle cx="-60" cy="560" r="340" fill="none" stroke="#c7d6e2" stroke-width="10"/>
+      <circle cx="-100" cy="590" r="240" fill="none" stroke="#f5a623" stroke-width="10" stroke-dasharray="220 1600"/>
     </svg>
   </div>
 

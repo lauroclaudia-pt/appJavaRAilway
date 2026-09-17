@@ -1,4 +1,4 @@
-# IPMA — Sistema de Recrutamento (Java + PostgreSQL)
+# Plataforma de Recrutamento do IPMA (Java + PostgreSQL)
 
 Reimplementação em **Java 21 / Spring Boot 3 / PostgreSQL**, sem qualquer dependência
 do Odoo, com base no levantamento de requisitos funcionais do IPMA, I.P.

@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IPMA Recrutamento — Concursos, Mobilidade e Bolsas de Investigação</title>
+<title>Plataforma de Recrutamento do IPMA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
 <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
 <header class="topbar">
-  <div class="brand"><span class="mark"></span>IPMA Recrutamento <small>Instituto Português do Mar e da Atmosfera</small></div>
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
   <nav class="nav">
     <a href="/index.html" class="current">Início</a>
     <a href="/jobs.html">Ofertas</a>
@@ -36,12 +37,42 @@
     </div>
   </div>
   <div class="hero-graphic" aria-hidden="true">
-    <svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-      <path class="draw" d="M -20 120 C 80 60, 160 180, 260 110 S 420 40, 520 100" fill="none" stroke="#2f8f8b" stroke-width="1.5"/>
-      <path class="draw" d="M -20 220 C 90 170, 170 270, 270 210 S 430 150, 520 205" fill="none" stroke="#7b97b0" stroke-width="1.5"/>
-      <path class="draw" d="M -20 320 C 100 280, 180 360, 280 310 S 440 260, 520 305" fill="none" stroke="#c7d6e2" stroke-width="1.5"/>
-      <path class="draw" d="M -20 400 C 90 460, 190 380, 290 430 S 430 480, 520 420" fill="none" stroke="#123a5e" stroke-width="1.5"/>
+    <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="arc-outer" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#54c8ee"/>
+          <stop offset="100%" stop-color="#1c4f8f"/>
+        </linearGradient>
+        <linearGradient id="arc-mid" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1c4f8f"/>
+          <stop offset="100%" stop-color="#0a2540"/>
+        </linearGradient>
+      </defs>
+      <!-- Círculos centrados fora da caixa, deixando apenas o arco superior visível — o mesmo princípio do símbolo do IPMA. -->
+      <circle class="draw" cx="60" cy="640" r="480" fill="none" stroke="url(#arc-outer)" stroke-width="14" stroke-linecap="round"/>
+      <circle class="draw draw-2" cx="60" cy="640" r="400" fill="none" stroke="url(#arc-mid)" stroke-width="14" stroke-linecap="round"/>
+      <circle class="draw draw-3" cx="10" cy="660" r="300" fill="none" stroke="#f5a623" stroke-width="14" stroke-linecap="round"/>
     </svg>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Sobre o IPMA</h2>
+  </div>
+  <div class="columns-3">
+    <div>
+      <h3>Mar e recursos marinhos</h3>
+      <p>Oceanografia, investigação das pescas e do meio marinho, e apoio científico à gestão sustentável dos recursos do mar português.</p>
+    </div>
+    <div>
+      <h3>Meteorologia e clima</h3>
+      <p>Observação, previsão e vigilância do estado do tempo, do clima e dos fenómenos extremos em todo o território nacional.</p>
+    </div>
+    <div>
+      <h3>Sismologia e geomagnetismo</h3>
+      <p>Monitorização da atividade sísmica e do campo geomagnético, com um papel central na segurança e na resposta a emergências.</p>
+    </div>
   </div>
 </section>
 
@@ -71,7 +102,8 @@
 
 <footer class="footer">
   <div><strong>Instituto Português do Mar e da Atmosfera, I.P.</strong><br>Rua C do Aeroporto, 1749-077 Lisboa</div>
-  <div>Divisão de Recursos Humanos<br><a href="/jobs.html">Consultar ofertas</a></div>
+  <div><strong>Divisão de Recursos Humanos</strong><br><a href="mailto:recrutamento@ipma.pt">recrutamento@ipma.pt</a></div>
+  <div><strong>Ligações</strong><br><a href="/jobs.html">Ofertas abertas</a> · <a href="https://www.ipma.pt" target="_blank" rel="noopener">Site institucional do IPMA</a></div>
 </footer>
 
 <script src="/js/app.js"></script>
