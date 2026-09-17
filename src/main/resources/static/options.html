@@ -104,7 +104,7 @@
   requireAuth();
   document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    if (user.role !== "ADMIN") window.location.href = "/dashboard.html";
+    if (!hasRole(user, "ADMIN")) window.location.href = "/dashboard.html";
   });
 
   const CATEGORIES = [

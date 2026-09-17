@@ -77,11 +77,19 @@
   apiFetch("/api/auth/me")
     .then(r => r.json())
     .then(user => {
-      document.getElementById("role-tag").textContent = roleLabel(user.role);
+      document.getElementById("role-tag").textContent = user.roles.map(roleLabel).join(" · ") || "Sem responsabilidades atribuídas";
       document.getElementById("welcome").textContent = "Bem-vindo(a), " + user.name;
       document.getElementById("welcome-sub").textContent = user.email;
 
-      const cards = CARDS_BY_ROLE[user.role] || [];
+      // Junta os cartões de todas as responsabilidades do trabalhador, sem repetir títulos.
+      const seen = new Set();
+      const cards = [];
+      user.roles.forEach(role => {
+        (CARDS_BY_ROLE[role] || []).forEach(c => {
+          if (!seen.has(c.title)) { seen.add(c.title); cards.push(c); }
+        });
+      });
+
       document.getElementById("dash-grid").innerHTML = cards.map(c => `
         <div class="dash-card">
           <h3>${c.title}</h3>
@@ -90,7 +98,7 @@
         </div>
       `).join("");
 
-      if (["ADMIN", "CDRH", "GESTOR_RH", "JURI"].includes(user.role)) {
+      if (hasRole(user, "ADMIN", "CDRH", "GESTOR_RH", "JURI")) {
         loadVagas();
       } else {
         document.getElementById("vagas-list").innerHTML = '<div class="empty-state">Sem vagas internas para o seu perfil.</div>';

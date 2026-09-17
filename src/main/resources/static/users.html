@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gerir Utilizadores — Plataforma de Recrutamento do IPMA</title>
+<title>Trabalhadores — Plataforma de Recrutamento do IPMA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,9 +14,18 @@
   .layout .panel { padding: 40px; }
   .layout .panel-form { border-right: 1px solid var(--line); }
   .form-note { font-size: 0.82rem; color: var(--mist); margin-top: 4px; }
-  .role-select { width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 3px; font-size: 1rem; font-family: var(--sans); background: var(--paper); color: var(--ink); }
   .form-success { background: #eaf6f0; border: 1px solid var(--teal); color: var(--teal-dark); padding: 12px 14px; border-radius: 3px; font-size: 0.88rem; margin-bottom: 20px; display: none; }
   .form-success.visible { display: block; }
+  .checkbox-group { border: 1px solid var(--line); border-radius: 3px; padding: 12px 14px; }
+  .checkbox-field { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .checkbox-field:last-child { margin-bottom: 0; }
+  .checkbox-field input { width: 16px; height: 16px; }
+  .checkbox-field label { font-size: 0.92rem; color: var(--ink-soft); margin: 0; }
+  .login-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 0.9rem; color: var(--ink-soft); }
+  .login-fields { display: none; }
+  .login-fields.visible { display: block; }
+  .badge-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--line); color: var(--ink-soft); }
   @media (max-width: 860px) {
     .layout { grid-template-columns: 1fr; }
     .layout .panel-form { border-right: none; border-bottom: 1px solid var(--line); }
@@ -36,15 +45,15 @@
 
 <div class="dash-header" style="padding-bottom: 20px;">
   <p style="margin:0 0 4px;"><a href="/admin.html">&larr; Administração</a></p>
-  <h1>Gerir utilizadores</h1>
-  <p>Crie contas de acesso para Gestores de RH, membros do Júri, CDRH e outros administradores.</p>
+  <h1>Trabalhadores</h1>
+  <p>Pessoas que podem ser indicadas em procedimentos (Gestor de RH, Júri, CDRH). O acesso de login é opcional — um membro de júri pode não ter conta na plataforma.</p>
 </div>
 
 <div class="layout">
   <div class="panel panel-form">
-    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;">Novo utilizador</h3>
+    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;">Novo trabalhador</h3>
 
-    <div class="form-success" id="success-box">Utilizador criado com sucesso.</div>
+    <div class="form-success" id="success-box">Trabalhador criado com sucesso.</div>
     <div class="form-error" id="error-box"></div>
 
     <form id="user-form" novalidate>
@@ -52,31 +61,40 @@
         <label for="name">Nome completo</label>
         <input type="text" id="name" name="name" required>
       </div>
+
       <div class="field">
-        <label for="email">Email institucional</label>
-        <input type="email" id="email" name="email" required>
+        <label>Responsabilidades</label>
+        <div class="checkbox-group">
+          <div class="checkbox-field"><input type="checkbox" id="role-gestor" value="GESTOR_RH"><label for="role-gestor">Gestor de RH</label></div>
+          <div class="checkbox-field"><input type="checkbox" id="role-juri" value="JURI"><label for="role-juri">Membro do Júri</label></div>
+          <div class="checkbox-field"><input type="checkbox" id="role-cdrh" value="CDRH"><label for="role-cdrh">CDRH (Chefe de Divisão de RH)</label></div>
+          <div class="checkbox-field"><input type="checkbox" id="role-admin" value="ADMIN"><label for="role-admin">Administrador</label></div>
+        </div>
       </div>
-      <div class="field">
-        <label for="password">Palavra-passe inicial</label>
-        <input type="password" id="password" name="password" minlength="8" required>
-        <div class="form-note">Mínimo 8 caracteres. O utilizador deve alterá-la no primeiro acesso.</div>
+
+      <label class="login-toggle">
+        <input type="checkbox" id="toggle-login"> Criar acesso de login para este trabalhador
+      </label>
+
+      <div class="login-fields" id="login-fields">
+        <div class="field">
+          <label for="email">Email institucional</label>
+          <input type="email" id="email" name="email">
+        </div>
+        <div class="field">
+          <label for="password">Palavra-passe inicial</label>
+          <input type="password" id="password" name="password" minlength="8">
+          <div class="form-note">Mínimo 8 caracteres. Deve ser alterada no primeiro acesso.</div>
+        </div>
       </div>
-      <div class="field">
-        <label for="role">Perfil</label>
-        <select id="role" name="role" class="role-select" required>
-          <option value="GESTOR_RH">Gestor de RH</option>
-          <option value="JURI">Membro do Júri</option>
-          <option value="CDRH">Chefe de Divisão de RH (CDRH)</option>
-          <option value="ADMIN">Administrador</option>
-        </select>
-      </div>
-      <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; justify-content:center;">Criar utilizador</button>
+
+      <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; justify-content:center;">Criar trabalhador</button>
     </form>
   </div>
 
   <div class="panel">
     <div class="section-head" style="margin-bottom:24px;">
-      <h3 style="font-family:var(--serif); font-size:1.2rem;">Utilizadores existentes</h3>
+      <h3 style="font-family:var(--serif); font-size:1.2rem;">Trabalhadores existentes</h3>
       <span class="meta" id="users-meta"></span>
     </div>
     <div class="bulletin" id="users-list">
@@ -93,33 +111,43 @@
 
   // Só ADMIN acede a esta página.
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    if (user.role !== "ADMIN") {
+    if (!hasRole(user, "ADMIN")) {
       window.location.href = "/dashboard.html";
     }
+  });
+
+  const toggleLogin = document.getElementById("toggle-login");
+  const loginFields = document.getElementById("login-fields");
+  toggleLogin.addEventListener("change", () => {
+    loginFields.classList.toggle("visible", toggleLogin.checked);
+    document.getElementById("email").required = toggleLogin.checked;
+    document.getElementById("password").required = toggleLogin.checked;
   });
 
   function loadUsers() {
     apiFetch("/api/admin/users")
       .then(r => r.json())
       .then(users => {
-        document.getElementById("users-meta").textContent = users.length + " utilizador(es)";
+        document.getElementById("users-meta").textContent = users.length + " trabalhador(es)";
         if (users.length === 0) {
-          document.getElementById("users-list").innerHTML = '<div class="empty-state">Ainda não existem utilizadores.</div>';
+          document.getElementById("users-list").innerHTML = '<div class="empty-state">Ainda não existem trabalhadores.</div>';
           return;
         }
         document.getElementById("users-list").innerHTML = users.map(u => `
           <div class="bulletin-row">
             <div>
               <span class="title">${u.name}</span>
-              <span class="subtitle">${u.email}</span>
+              <span class="subtitle">${u.email || "Sem acesso de login"}</span>
+              <div class="badge-list">
+                ${(u.responsabilidades || []).map(r => `<span class="badge">${roleLabel(r)}</span>`).join("") || '<span class="badge">Sem responsabilidade atribuída</span>'}
+              </div>
             </div>
-            <span class="tag">${roleLabel(u.role)}</span>
             <span class="deadline">${u.active ? "Ativo" : "Inativo"}</span>
           </div>
         `).join("");
       })
       .catch(() => {
-        document.getElementById("users-list").innerHTML = '<div class="empty-state">Não foi possível carregar os utilizadores.</div>';
+        document.getElementById("users-list").innerHTML = '<div class="empty-state">Não foi possível carregar os trabalhadores.</div>';
       });
   }
   loadUsers();
@@ -133,14 +161,22 @@
     e.preventDefault();
     errorBox.classList.remove("visible");
     successBox.classList.remove("visible");
+
+    const roles = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked')).map(cb => cb.value);
+    if (roles.length === 0) {
+      errorBox.textContent = "Selecione pelo menos uma responsabilidade.";
+      errorBox.classList.add("visible");
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = "A criar…";
 
     const payload = {
       name: document.getElementById("name").value.trim(),
-      email: document.getElementById("email").value.trim(),
-      password: document.getElementById("password").value,
-      role: document.getElementById("role").value,
+      email: toggleLogin.checked ? document.getElementById("email").value.trim() : null,
+      password: toggleLogin.checked ? document.getElementById("password").value : null,
+      roles,
     };
 
     try {
@@ -153,10 +189,11 @@
       if (res.ok) {
         successBox.classList.add("visible");
         form.reset();
+        loginFields.classList.remove("visible");
         loadUsers();
       } else {
         const data = await res.json().catch(() => ({}));
-        errorBox.textContent = data.message || "Não foi possível criar o utilizador.";
+        errorBox.textContent = data.message || "Não foi possível criar o trabalhador.";
         errorBox.classList.add("visible");
       }
     } catch (err) {
@@ -164,7 +201,7 @@
       errorBox.classList.add("visible");
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = "Criar utilizador";
+      submitBtn.textContent = "Criar trabalhador";
     }
   });
 </script>

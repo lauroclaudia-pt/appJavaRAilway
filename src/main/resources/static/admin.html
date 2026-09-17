@@ -29,8 +29,8 @@
 
 <div class="dash-grid">
   <div class="dash-card">
-    <h3>Utilizadores</h3>
-    <p>Criar e consultar contas de Gestores de RH, Júri, CDRH e Administradores.</p>
+    <h3>Trabalhadores</h3>
+    <p>Gerir pessoas, as suas responsabilidades (Gestor de RH, Júri, CDRH, Admin) e acesso de login opcional.</p>
     <a class="btn btn-ghost" href="/users.html">Abrir</a>
   </div>
   <div class="dash-card">
@@ -45,7 +45,7 @@
   requireAuth();
   document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    if (user.role !== "ADMIN") window.location.href = "/dashboard.html";
+    if (!hasRole(user, "ADMIN")) window.location.href = "/dashboard.html";
   });
 </script>
 </body>

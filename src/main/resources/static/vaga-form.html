@@ -16,10 +16,11 @@
   .form-section .hint { font-size: 0.85rem; color: var(--mist); margin-bottom: 20px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  select, textarea {
+  select, textarea, input[type="file"] {
     width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 3px;
     font-size: 1rem; font-family: var(--sans); background: var(--paper); color: var(--ink);
   }
+  input[type="file"] { padding: 9px 12px; font-size: 0.9rem; }
   textarea { min-height: 90px; resize: vertical; }
   .checkbox-field { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .checkbox-field input { width: 16px; height: 16px; }
@@ -84,13 +85,18 @@
         <input type="number" id="noOfRecruitment" value="1" min="1" required>
       </div>
       <div class="field">
-        <label for="publicationDate">Data de publicação</label>
+        <label for="publicationDate">Data de publicação (website)</label>
         <input type="date" id="publicationDate">
       </div>
       <div class="field">
-        <label for="deadlineDate">Prazo de candidatura</label>
-        <input type="datetime-local" id="deadlineDate">
+        <label for="bepPublicationDate">Data de publicação na BEP</label>
+        <input type="date" id="bepPublicationDate">
       </div>
+    </div>
+
+    <div class="field">
+      <label for="deadlineDate">Prazo de candidatura</label>
+      <input type="datetime-local" id="deadlineDate">
     </div>
 
     <div class="field">
@@ -101,6 +107,20 @@
     <div class="field">
       <label for="workLocationId">Local de trabalho</label>
       <select id="workLocationId"><option value="">— Selecionar —</option></select>
+    </div>
+
+    <div class="form-section">
+      <h3>Documentos</h3>
+      <p class="hint">Podem ser adicionados ou substituídos mais tarde a partir do detalhe da vaga.</p>
+
+      <div class="field">
+        <label for="edital">Edital / Aviso de Abertura</label>
+        <input type="file" id="edital">
+      </div>
+      <div class="field">
+        <label for="anexos">Anexos do procedimento</label>
+        <input type="file" id="anexos" multiple>
+      </div>
     </div>
 
     <div class="form-section">
@@ -167,12 +187,13 @@
     </div>
 
     <div class="form-section">
-      <h3>Júri e gestão do procedimento</h3>
+      <h3>Gestão do procedimento e Júri</h3>
+      <p class="hint">As listas abaixo mostram apenas trabalhadores com a responsabilidade correspondente (geridos em Administração → Trabalhadores).</p>
 
       <div class="field-row">
         <div class="field">
-          <label for="gestorId">Gestor de RH</label>
-          <select id="gestorId"><option value="">— Selecionar —</option></select>
+          <label for="gestorId">Gestor de RH *</label>
+          <select id="gestorId" required><option value="">— Selecionar —</option></select>
         </div>
         <div class="field">
           <label for="gestorSuplenteId">Gestor de RH suplente</label>
@@ -202,6 +223,16 @@
           <select id="juriVe2Id"><option value="">— Selecionar —</option></select>
         </div>
       </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="juriVs1Id">Vogal Suplente 1</label>
+          <select id="juriVs1Id"><option value="">— Selecionar —</option></select>
+        </div>
+        <div class="field">
+          <label for="juriVs2Id">Vogal Suplente 2</label>
+          <select id="juriVs2Id"><option value="">— Selecionar —</option></select>
+        </div>
+      </div>
     </div>
 
     <div class="form-section">
@@ -223,15 +254,20 @@
   requireAuth();
   document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
 
+  let currentUserId = null;
+
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    if (!["ADMIN", "CDRH", "GESTOR_RH"].includes(user.role)) window.location.href = "/dashboard.html";
+    if (!hasRole(user, "ADMIN", "CDRH", "GESTOR_RH")) { window.location.href = "/dashboard.html"; return; }
+    currentUserId = user.id;
+    loadJuriDropdowns();
   });
 
-  function fillSelect(selectEl, items, valueKey, labelKey) {
+  function fillSelect(selectEl, items, valueKey, labelKey, selectedId) {
     items.forEach(item => {
       const opt = document.createElement("option");
       opt.value = item[valueKey];
       opt.textContent = item[labelKey];
+      if (selectedId != null && String(item[valueKey]) === String(selectedId)) opt.selected = true;
       selectEl.appendChild(opt);
     });
   }
@@ -264,13 +300,21 @@
     `).join("");
   });
 
-  const roleLabels = { GESTOR_RH: "Gestor RH", CDRH: "CDRH", JURI: "Júri", ADMIN: "Admin" };
-  apiFetch("/api/backoffice/users").then(r => r.json()).then(users => {
-    const asOptions = users.map(u => ({ id: u.id, label: `${u.name} (${roleLabels[u.role] || u.role})` }));
-    ["gestorId", "gestorSuplenteId", "managerCdrhId", "juriPresidenteId", "juriVe1Id", "juriVe2Id"].forEach(id => {
-      fillSelect(document.getElementById(id), asOptions, "id", "label");
-    });
-  });
+  /** Cada dropdown só lista trabalhadores com a responsabilidade correspondente. */
+  function loadJuriDropdowns() {
+    const byRole = (role, selectIds, defaultToCurrentUser) => {
+      apiFetch("/api/backoffice/users?role=" + role).then(r => r.json()).then(trabalhadores => {
+        const opts = trabalhadores.map(t => ({ id: t.id, label: t.name }));
+        selectIds.forEach(id => {
+          const el = document.getElementById(id);
+          fillSelect(el, opts, "id", "label", defaultToCurrentUser ? currentUserId : null);
+        });
+      });
+    };
+    byRole("GESTOR_RH", ["gestorId", "gestorSuplenteId"], true);
+    byRole("CDRH", ["managerCdrhId"], false);
+    byRole("JURI", ["juriPresidenteId", "juriVe1Id", "juriVe2Id", "juriVs1Id", "juriVs2Id"], false);
+  }
 
   document.getElementById("vaga-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -279,7 +323,7 @@
     errorBox.classList.remove("visible");
     successBox.style.display = "none";
 
-    const departmentIds = Array.from(document.querySelectorAll('input[name="dept"]:checked')).map(cb => parseInt(cb.value, 10));
+    const departmentIds = Array.from(document.querySelectorAll('input[name="dept"]:checked')).map(cb => cb.value);
     if (departmentIds.length === 0) {
       errorBox.textContent = "Selecione pelo menos uma unidade orgânica.";
       errorBox.classList.add("visible");
@@ -288,48 +332,67 @@
     }
 
     const val = id => document.getElementById(id).value || null;
-    const numOrNull = id => { const v = val(id); return v ? Number(v) : null; };
 
-    const payload = {
-      name: val("name"),
-      offerType: val("offerType"),
-      jobPosition: val("jobPosition"),
-      noOfRecruitment: numOrNull("noOfRecruitment"),
-      publicationDate: val("publicationDate"),
-      deadlineDate: val("deadlineDate"),
-      vinculo: val("vinculo"),
-      regime: val("regime"),
-      salary: numOrNull("salary"),
-      salaryPlus: numOrNull("salaryPlus"),
-      vacancyRelation: val("vacancyRelation"),
-      allowNoDegree: document.getElementById("allowNoDegree").checked,
-      vagasDeficiencia: document.getElementById("vagasDeficiencia").checked,
-      requirements: val("requirements"),
-      nivelHabilitacional: val("nivelHabilitacional"),
-      websiteDescription: val("websiteDescription"),
-      hasPc: document.getElementById("hasPc").checked,
-      hasAc: document.getElementById("hasAc").checked,
-      hasEac: document.getElementById("hasEac").checked,
-      gestorId: numOrNull("gestorId"),
-      gestorSuplenteId: numOrNull("gestorSuplenteId"),
-      managerCdrhId: numOrNull("managerCdrhId"),
-      juriPresidenteId: numOrNull("juriPresidenteId"),
-      juriVe1Id: numOrNull("juriVe1Id"),
-      juriVe2Id: numOrNull("juriVe2Id"),
-      workLocationId: numOrNull("workLocationId"),
-      departmentIds,
-    };
+    if (!val("gestorId")) {
+      errorBox.textContent = "O Gestor de RH é obrigatório.";
+      errorBox.classList.add("visible");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const juriIds = ["juriPresidenteId", "juriVe1Id", "juriVe2Id", "juriVs1Id", "juriVs2Id"].map(val).filter(Boolean);
+    if (new Set(juriIds).size !== juriIds.length) {
+      errorBox.textContent = "O Presidente do Júri, os Vogais Efetivos e os Vogais Suplentes têm de ser todos diferentes entre si.";
+      errorBox.classList.add("visible");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const formData = new FormData();
+    const put = (key, id) => { const v = val(id); if (v !== null) formData.append(key, v); };
+    const putChecked = (key, id) => { if (document.getElementById(id).checked) formData.append(key, "true"); };
+
+    put("name", "name");
+    put("offerType", "offerType");
+    put("jobPosition", "jobPosition");
+    put("noOfRecruitment", "noOfRecruitment");
+    put("publicationDate", "publicationDate");
+    put("bepPublicationDate", "bepPublicationDate");
+    put("deadlineDate", "deadlineDate");
+    put("vinculo", "vinculo");
+    put("regime", "regime");
+    put("salary", "salary");
+    put("salaryPlus", "salaryPlus");
+    put("vacancyRelation", "vacancyRelation");
+    putChecked("allowNoDegree", "allowNoDegree");
+    putChecked("vagasDeficiencia", "vagasDeficiencia");
+    put("requirements", "requirements");
+    put("nivelHabilitacional", "nivelHabilitacional");
+    put("websiteDescription", "websiteDescription");
+    putChecked("hasPc", "hasPc");
+    putChecked("hasAc", "hasAc");
+    putChecked("hasEac", "hasEac");
+    put("gestorId", "gestorId");
+    put("gestorSuplenteId", "gestorSuplenteId");
+    put("managerCdrhId", "managerCdrhId");
+    put("juriPresidenteId", "juriPresidenteId");
+    put("juriVe1Id", "juriVe1Id");
+    put("juriVe2Id", "juriVe2Id");
+    put("juriVs1Id", "juriVs1Id");
+    put("juriVs2Id", "juriVs2Id");
+    put("workLocationId", "workLocationId");
+    departmentIds.forEach(id => formData.append("departmentIds", id));
+
+    const editalFile = document.getElementById("edital").files[0];
+    if (editalFile) formData.append("edital", editalFile);
+    Array.from(document.getElementById("anexos").files).forEach(f => formData.append("anexos", f));
 
     const submitBtn = document.getElementById("submit-btn");
     submitBtn.disabled = true;
     submitBtn.textContent = "A criar…";
 
     try {
-      const res = await apiFetch("/api/backoffice/vagas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await apiFetch("/api/backoffice/vagas", { method: "POST", body: formData });
       if (res.ok) {
         const vaga = await res.json();
         window.location.href = "/vaga-detail.html?id=" + vaga.id;

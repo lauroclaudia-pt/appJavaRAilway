@@ -129,6 +129,7 @@
       document.getElementById("info-grid").innerHTML = `
         <div><div class="label">Estado</div><div class="value"><span class="tag state-${(vaga.state||"").toLowerCase()}">${stateLabels[vaga.state] || vaga.state}</span></div></div>
         <div><div class="label">Código BEP / Edital</div><div class="value">${vaga.vagaCode || "— por publicar —"}</div></div>
+        <div><div class="label">Data de publicação na BEP</div><div class="value">${fmtDate(vaga.bepPublicationDate)}</div></div>
         <div><div class="label">N.º de vagas</div><div class="value">${vaga.noOfRecruitment ?? "—"}</div></div>
         <div><div class="label">Prazo de candidatura</div><div class="value">${fmtDate(vaga.deadlineDate)}</div></div>
         <div><div class="label">Unidade(s) orgânica(s)</div><div class="value">${depts}</div></div>
@@ -303,7 +304,7 @@
   }
 
   apiFetch("/api/auth/me").then(r => r.json()).then(user => {
-    canManageVaga = ["ADMIN", "CDRH", "GESTOR_RH"].includes(user.role);
+    canManageVaga = hasRole(user, "ADMIN", "CDRH", "GESTOR_RH");
     loadVaga();
     loadCandidates();
   });

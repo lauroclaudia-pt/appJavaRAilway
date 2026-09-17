@@ -80,3 +80,8 @@ function roleLabel(role) {
     PORTAL: "Candidato",
   }[role] || role;
 }
+
+/** user.roles é agora uma lista (um trabalhador pode ter várias responsabilidades). */
+function hasRole(user, ...roles) {
+  return !!user && Array.isArray(user.roles) && roles.some(r => user.roles.includes(r));
+}
