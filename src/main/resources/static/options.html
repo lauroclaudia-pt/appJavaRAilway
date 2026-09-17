@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opções de Candidatura — Plataforma de Recrutamento do IPMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  .layout { display: grid; grid-template-columns: 380px 1fr; gap: 0; align-items: start; }
+  .layout .panel { padding: 40px; }
+  .layout .panel-form { border-right: 1px solid var(--line); }
+  .role-select { width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 3px; font-size: 1rem; font-family: var(--sans); background: var(--paper); color: var(--ink); }
+  .form-success { background: #eaf6f0; border: 1px solid var(--teal); color: var(--teal-dark); padding: 12px 14px; border-radius: 3px; font-size: 0.88rem; margin-bottom: 20px; display: none; }
+  .form-success.visible { display: block; }
+  .cat-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 40px; margin-bottom: 8px; }
+  .cat-tab { padding: 8px 16px; border: 1px solid var(--line); border-radius: 20px; font-size: 0.85rem; color: var(--ink-soft); background: var(--paper); cursor: pointer; }
+  .cat-tab.active { border-color: var(--navy-deep); color: var(--navy-deep); background: var(--foam); font-weight: 500; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tag.state-scheduled { color: var(--mist); }
+  .tag.state-active { color: var(--teal-dark); border-color: var(--teal); }
+  .tag.state-expired { color: var(--danger); border-color: var(--danger); }
+  .row-actions { display: flex; gap: 10px; font-size: 0.82rem; }
+  .row-actions a { color: var(--mist); }
+  .row-actions a:hover { color: var(--navy-deep); }
+  .row-actions .delete-link:hover { color: var(--danger); }
+  .cancel-edit { font-size: 0.85rem; color: var(--mist); margin-top: 10px; display: none; text-align: center; }
+  .cancel-edit.visible { display: block; }
+  .form-note { font-size: 0.82rem; color: var(--mist); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
+  <nav class="nav">
+    <a href="/dashboard.html">Painel</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="#" class="btn btn-ghost" id="logout-link">Sair</a>
+  </nav>
+</header>
+
+<div class="dash-header" style="padding-bottom: 20px;">
+  <p style="margin:0 0 4px;"><a href="/admin.html">&larr; Administração</a></p>
+  <h1>Opções de candidatura</h1>
+  <p>Listas usadas nos campos de seleção da Vaga e da Candidatura. Cada opção só fica visível nos formulários dentro da sua janela de validade.</p>
+</div>
+
+<div class="cat-tabs" id="cat-tabs"></div>
+
+<div class="layout">
+  <div class="panel panel-form">
+    <h3 style="font-family:var(--serif); font-size:1.2rem; margin-bottom:18px;" id="form-title">Nova opção</h3>
+
+    <div class="form-success" id="success-box">Guardado com sucesso.</div>
+    <div class="form-error" id="error-box"></div>
+
+    <form id="option-form" novalidate>
+      <input type="hidden" id="option-id" value="">
+      <div class="field">
+        <label for="value">Código interno</label>
+        <input type="text" id="value" name="value" placeholder="ex.: LICENCIATURA" required>
+        <div class="form-note">Identificador estável, sem espaços. Não deve ser alterado depois de usado.</div>
+      </div>
+      <div class="field">
+        <label for="label">Rótulo apresentado</label>
+        <input type="text" id="label" name="label" placeholder="ex.: Licenciatura" required>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="startDate">Data de início</label>
+          <input type="datetime-local" id="startDate" name="startDate" required>
+        </div>
+        <div class="field">
+          <label for="endDate">Data de fim</label>
+          <input type="datetime-local" id="endDate" name="endDate">
+        </div>
+      </div>
+      <div class="field">
+        <label for="sortOrder">Ordem de apresentação</label>
+        <input type="number" id="sortOrder" name="sortOrder" value="10" step="10">
+      </div>
+      <button type="submit" class="btn btn-primary" id="submit-btn" style="width:100%; justify-content:center;">Criar opção</button>
+      <div class="cancel-edit" id="cancel-edit"><a href="#">Cancelar edição</a></div>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="section-head" style="margin-bottom:24px;">
+      <h3 style="font-family:var(--serif); font-size:1.2rem;" id="list-title">Vínculo</h3>
+      <span class="meta" id="options-meta"></span>
+    </div>
+    <div class="bulletin" id="options-list">
+      <div class="empty-state">A carregar…</div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
+  apiFetch("/api/auth/me").then(r => r.json()).then(user => {
+    if (user.role !== "ADMIN") window.location.href = "/dashboard.html";
+  });
+
+  const CATEGORIES = [
+    { code: "VINCULO", label: "Vínculo" },
+    { code: "REGIME", label: "Regime" },
+    { code: "NIVEL_HABILITACIONAL", label: "Nível Habilitacional" },
+    { code: "SITUACAO_PROFISSIONAL", label: "Situação Profissional" },
+    { code: "RELACAO_VAGAS_CANDIDATURAS", label: "Relação de Vagas/Candidaturas" },
+  ];
+
+  let currentCategory = CATEGORIES[0].code;
+
+  const tabsEl = document.getElementById("cat-tabs");
+  tabsEl.innerHTML = CATEGORIES.map(c =>
+    `<button type="button" class="cat-tab" data-cat="${c.code}">${c.label}</button>`
+  ).join("");
+
+  function setActiveTab() {
+    document.querySelectorAll(".cat-tab").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.cat === currentCategory);
+    });
+    document.getElementById("list-title").textContent = CATEGORIES.find(c => c.code === currentCategory).label;
+  }
+
+  tabsEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".cat-tab");
+    if (!btn) return;
+    currentCategory = btn.dataset.cat;
+    setActiveTab();
+    resetForm();
+    loadOptions();
+  });
+
+  function stateOf(opt) {
+    const now = new Date();
+    const start = new Date(opt.startDate);
+    const end = opt.endDate ? new Date(opt.endDate) : null;
+    if (start > now) return { label: "Agendada", cls: "state-scheduled" };
+    if (end && end <= now) return { label: "Expirada", cls: "state-expired" };
+    return { label: "Ativa", cls: "state-active" };
+  }
+
+  function fmt(iso) {
+    if (!iso) return "sem data de fim";
+    return new Date(iso).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function loadOptions() {
+    document.getElementById("options-list").innerHTML = '<div class="empty-state">A carregar…</div>';
+    apiFetch("/api/admin/options?category=" + currentCategory)
+      .then(r => r.json())
+      .then(options => {
+        document.getElementById("options-meta").textContent = options.length + " opção(ões)";
+        if (options.length === 0) {
+          document.getElementById("options-list").innerHTML = '<div class="empty-state">Ainda não existem opções nesta categoria.</div>';
+          return;
+        }
+        document.getElementById("options-list").innerHTML = options.map(o => {
+          const st = stateOf(o);
+          return `
+            <div class="bulletin-row">
+              <div>
+                <span class="title">${o.label}</span>
+                <span class="subtitle">Código ${o.value} · ${fmt(o.startDate)} — ${fmt(o.endDate)}</span>
+              </div>
+              <span class="tag ${st.cls}">${st.label}</span>
+              <span class="row-actions">
+                <a href="#" class="edit-link" data-id="${o.id}">Editar</a>
+                <a href="#" class="delete-link" data-id="${o.id}">Apagar</a>
+              </span>
+            </div>
+          `;
+        }).join("");
+
+        document.querySelectorAll(".edit-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const opt = options.find(o => o.id == a.dataset.id);
+          startEdit(opt);
+        }));
+        document.querySelectorAll(".delete-link").forEach(a => a.addEventListener("click", (e) => {
+          e.preventDefault();
+          const opt = options.find(o => o.id == a.dataset.id);
+          if (confirm(`Apagar a opção "${opt.label}"? Esta ação não pode ser desfeita.`)) {
+            apiFetch("/api/admin/options/" + opt.id, { method: "DELETE" })
+              .then(res => {
+                if (res.ok) loadOptions();
+                else alert("Não foi possível apagar esta opção.");
+              });
+          }
+        }));
+      })
+      .catch(() => {
+        document.getElementById("options-list").innerHTML = '<div class="empty-state">Não foi possível carregar as opções.</div>';
+      });
+  }
+
+  function toLocalInputValue(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function startEdit(opt) {
+    document.getElementById("form-title").textContent = "Editar opção";
+    document.getElementById("option-id").value = opt.id;
+    document.getElementById("value").value = opt.value;
+    document.getElementById("label").value = opt.label;
+    document.getElementById("startDate").value = toLocalInputValue(opt.startDate);
+    document.getElementById("endDate").value = toLocalInputValue(opt.endDate);
+    document.getElementById("sortOrder").value = opt.sortOrder;
+    document.getElementById("submit-btn").textContent = "Guardar alterações";
+    document.getElementById("cancel-edit").classList.add("visible");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    document.getElementById("form-title").textContent = "Nova opção";
+    document.getElementById("option-form").reset();
+    document.getElementById("option-id").value = "";
+    document.getElementById("startDate").value = toLocalInputValue(new Date().toISOString());
+    document.getElementById("sortOrder").value = 10;
+    document.getElementById("submit-btn").textContent = "Criar opção";
+    document.getElementById("cancel-edit").classList.remove("visible");
+    document.getElementById("error-box").classList.remove("visible");
+    document.getElementById("success-box").classList.remove("visible");
+  }
+
+  document.getElementById("cancel-edit").addEventListener("click", (e) => {
+    e.preventDefault();
+    resetForm();
+  });
+
+  document.getElementById("option-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errorBox = document.getElementById("error-box");
+    const successBox = document.getElementById("success-box");
+    errorBox.classList.remove("visible");
+    successBox.classList.remove("visible");
+
+    const id = document.getElementById("option-id").value;
+    const payload = {
+      category: currentCategory,
+      value: document.getElementById("value").value.trim(),
+      label: document.getElementById("label").value.trim(),
+      startDate: document.getElementById("startDate").value || null,
+      endDate: document.getElementById("endDate").value || null,
+      sortOrder: parseInt(document.getElementById("sortOrder").value || "0", 10),
+    };
+
+    const url = id ? "/api/admin/options/" + id : "/api/admin/options";
+    const method = id ? "PUT" : "POST";
+
+    try {
+      const res = await apiFetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        successBox.textContent = id ? "Opção atualizada com sucesso." : "Opção criada com sucesso.";
+        successBox.classList.add("visible");
+        resetForm();
+        loadOptions();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        errorBox.textContent = data.message || "Não foi possível guardar a opção.";
+        errorBox.classList.add("visible");
+      }
+    } catch (err) {
+      errorBox.textContent = "Falha de ligação ao servidor.";
+      errorBox.classList.add("visible");
+    }
+  });
+
+  setActiveTab();
+  resetForm();
+  loadOptions();
+</script>
+</body>
+</html>

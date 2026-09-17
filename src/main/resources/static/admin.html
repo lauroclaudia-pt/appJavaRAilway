@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administração — Plataforma de Recrutamento do IPMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="/img/ipma-mark.png" type="image/png">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a href="/index.html" class="brand"><img src="/img/ipma-mark.png" alt="IPMA" class="brand-mark">Plataforma de Recrutamento <small>do IPMA</small></a>
+  <nav class="nav">
+    <a href="/dashboard.html">Painel</a>
+    <a href="/jobs.html">Ofertas</a>
+    <a href="#" class="btn btn-ghost" id="logout-link">Sair</a>
+  </nav>
+</header>
+
+<div class="dash-header">
+  <p style="margin:0 0 4px;"><a href="/dashboard.html">&larr; Painel</a></p>
+  <h1>Administração</h1>
+  <p>Configuração de utilizadores e das listas de opções usadas nos formulários de vaga e candidatura.</p>
+</div>
+
+<div class="dash-grid">
+  <div class="dash-card">
+    <h3>Utilizadores</h3>
+    <p>Criar e consultar contas de Gestores de RH, Júri, CDRH e Administradores.</p>
+    <a class="btn btn-ghost" href="/users.html">Abrir</a>
+  </div>
+  <div class="dash-card">
+    <h3>Opções de candidatura</h3>
+    <p>Gerir as listas de Vínculo, Regime, Nível Habilitacional, Situação Profissional e Relação de Vagas/Candidaturas.</p>
+    <a class="btn btn-ghost" href="/options.html">Abrir</a>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+  requireAuth();
+  document.getElementById("logout-link").addEventListener("click", (e) => { e.preventDefault(); logout(); });
+  apiFetch("/api/auth/me").then(r => r.json()).then(user => {
+    if (user.role !== "ADMIN") window.location.href = "/dashboard.html";
+  });
+</script>
+</body>
+</html>
